@@ -1,0 +1,30 @@
+[
+  {
+    "id": "353a3f81-5d59-494f-b7dd-7ac427ce62a0",
+    "status": "completed",
+    "display_name": "GPT Image 2",
+    "job_set_type": "gpt_image_2",
+    "result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/hf_20260614_043105_353a3f81-5d59-494f-b7dd-7ac427ce62a0.png",
+    "created_at": 1781411465.374329,
+    "params": {
+      "width": 2336,
+      "height": 1744,
+      "prompt": "Create an isolated production reference image for segmentation, not a scenic artwork.\n\nSubject: a Bentenjima / Lake Hamana style vermilion red torii symbol tower, front-facing, full object visible, centered, with two tall cylindrical main pillars, curved top lintel, lower crossbeam, small side support posts, concrete footings, and a subtle vertical white inscription on one main pillar. Preserve the recognizable proportions of the Bentenjima red torii reference image.\n\nBackground: pure flat chroma green (#00FF00), perfectly uniform, no gradients, no sky, no mountains, no water, no reflections, no shadows, no haze, no floor, no texture. Keep a wide clean margin around the object. The torii must be sharply separated from the background with crisp edges and no green spill on the object.\n\nLighting: neutral studio lighting, no dramatic shadows, no backlight. Output is for SAM segmentation and alpha mask extraction.",
+      "medias": [
+        {
+          "data": {
+            "id": "759ebbbd-ea38-4499-81a5-7f5b29c0ebd9",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/759ebbbd-ea38-4499-81a5-7f5b29c0ebd9.png",
+            "type": "media_input"
+          },
+          "role": "image"
+        }
+      ],
+      "aspect_ratio": "4:3",
+      "quality": "high",
+      "resolution": "2k",
+      "model": "videotape-alpha",
+      "reference_elements": []
+    }
+  }
+]

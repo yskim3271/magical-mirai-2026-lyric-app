@@ -1,0 +1,96 @@
+export const SONGS = [
+  {
+    id: "kotaete",
+    title: "こたえて",
+    artist: "imie",
+    award: "Grand Prix",
+    songUrl: "https://piapro.jp/t/6W2N/20251215164617",
+    lyricUrl: "https://piapro.jp/t/9o24",
+    video: {
+      beatId: 4827293,
+      chordId: 2963754,
+      repetitiveSegmentId: 3086261,
+      lyricId: 126519,
+      lyricDiffId: 28645,
+    },
+  },
+  {
+    id: "after-the-curtain",
+    title: "アフター・ザ・カーテン",
+    artist: "Rulmry",
+    award: "Runner-up",
+    songUrl: "https://piapro.jp/t/zoqO/20251214200738",
+    lyricUrl: "https://piapro.jp/t/EVO2",
+    video: {
+      beatId: 4827294,
+      chordId: 2963755,
+      repetitiveSegmentId: 3086262,
+      lyricId: 126591,
+      lyricDiffId: 28627,
+    },
+  },
+  {
+    id: "shutter-chance",
+    title: "シャッターチャンス",
+    artist: "夜未アガリ",
+    award: "Runner-up",
+    songUrl: "https://piapro.jp/t/PNpQ/20251209170719",
+    lyricUrl: "https://piapro.jp/t/wyWv",
+    video: {
+      beatId: 4827295,
+      chordId: 2963756,
+      repetitiveSegmentId: 3086263,
+      lyricId: 126542,
+      lyricDiffId: 28628,
+    },
+  },
+  {
+    id: "last-band",
+    title: "世界最後の音楽隊",
+    artist: "夏山よつぎ×ど～ぱみん",
+    award: "Runner-up",
+    songUrl: "https://piapro.jp/t/B3yJ/20251215061727",
+    lyricUrl: "https://piapro.jp/t/9U-6",
+    video: {
+      beatId: 4827296,
+      chordId: 2963757,
+      repetitiveSegmentId: 3086264,
+      lyricId: 126594,
+      lyricDiffId: 28629,
+    },
+  },
+  {
+    id: "toritsukurogy",
+    title: "トリツクロジー",
+    artist: "鶴三",
+    award: "Runner-up",
+    songUrl: "https://piapro.jp/t/QBdL/20251215094303",
+    lyricUrl: "https://piapro.jp/t/Nixq",
+    video: {
+      beatId: 4827297,
+      chordId: 2963758,
+      repetitiveSegmentId: 3086265,
+      lyricId: 126593,
+      lyricDiffId: 28630,
+    },
+  },
+  {
+    id: "takeover",
+    title: "TAKEOVER",
+    artist: "Twinfield",
+    award: "Runner-up",
+    songUrl: "https://piapro.jp/t/E2i3/20251215092113",
+    lyricUrl: "https://piapro.jp/t/zxWP",
+    video: {
+      beatId: 4827298,
+      chordId: 2963759,
+      repetitiveSegmentId: 3086266,
+      lyricId: 126533,
+      lyricDiffId: 28631,
+    },
+  },
+];
+
+export function findSong(id) {
+  return SONGS.find((song) => song.id === id) ?? SONGS[0];
+}

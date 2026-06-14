@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Magical Mirai 2026 Lyric App</title>
+  <link rel="stylesheet" href="/src/styles.css" />
+</head>
+<body>
+  <main id="app">
+    <div id="lake-scene" aria-hidden="true"></div>
+    <div id="lyric-effects" aria-hidden="true"></div>
+
+    <section class="control-dock" id="control-dock" aria-label="player and song controls">
+      <button
+        class="dock-toggle"
+        id="btn-toggle-dock"
+        type="button"
+        aria-expanded="true"
+        aria-controls="dock-panel"
+      >Hide panel</button>
+
+      <div class="dock-panel" id="dock-panel">
+        <div class="dock-main">
+          <div class="track-meta">
+            <p class="eyebrow">Magical Mirai 2026 Programming Contest</p>
+            <h1 id="song-title">Sonare Lake PoC</h1>
+            <p id="song-artist">6-song responsive ripple prototype</p>
+          </div>
+
+          <div class="playback-controls">
+            <div class="transport" aria-label="player controls">
+              <button id="btn-play" type="button" disabled>Play</button>
+              <button id="btn-pause" type="button" disabled>Pause</button>
+              <button id="btn-stop" type="button" disabled>Stop</button>
+            </div>
+
+            <label class="volume-control" for="volume-slider">
+              <span>Volume</span>
+              <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" />
+              <output id="volume-label" for="volume-slider">100%</output>
+            </label>
+          </div>
+        </div>
+
+        <div class="song-strip" id="song-list" aria-label="target songs"></div>
+
+        <div class="time-row">
+          <span id="status">Initializing TextAlive...</span>
+          <span><b id="now-position">0:00.000</b> / <b id="now-duration">-</b></span>
+        </div>
+        <div class="progress"><div id="progress-bar"></div></div>
+        <p class="data-line">
+          <span>Beat <b id="beat-label">-</b></span>
+          <span>Chorus <b id="chorus-label">-</b></span>
+          <span>Vocal <b id="amp-label">-</b></span>
+        </p>
+      </div>
+    </section>
+  </main>
+
+  <div id="media"></div>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>

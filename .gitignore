@@ -1,0 +1,8 @@
+node_modules/
+dist/
+.env
+moodboard/
+concept/
+__pycache__/
+*.pyc
+tools/torii-segmentation/models/

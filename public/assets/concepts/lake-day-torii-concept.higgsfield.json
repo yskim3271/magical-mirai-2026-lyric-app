@@ -1,0 +1,30 @@
+[
+  {
+    "id": "e4417199-73df-42f2-aebd-f88dacfc86d9",
+    "status": "completed",
+    "display_name": "GPT Image 2",
+    "job_set_type": "gpt_image_2",
+    "result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/hf_20260614_030209_e4417199-73df-42f2-aebd-f88dacfc86d9.png",
+    "created_at": 1781406129.134785,
+    "params": {
+      "width": 2688,
+      "height": 1520,
+      "prompt": "Use the provided lake background as the base image and preserve its camera angle, horizon, water color, lighting, and clean-sky composition.\n\nAdd a distant Bentenjima / Lake Hamana style vermilion red torii symbol tower standing in shallow water near the horizon, slightly left of center. The torii should be inspired by the real Bentenjima red torii: two tall cylindrical red main pillars, a gently curved top lintel, a straight lower crossbeam, smaller support posts around the base, concrete footings at the waterline, and a subtle vertical white inscription on one pillar. It must feel like a real 18-meter lakeside landmark seen from far away, not a fantasy shrine and not a foreground object.\n\nMake the torii naturally integrated into this scene: correct atmospheric perspective, muted red due to distance, soft contact shadows, small water reflection directly below it, and matching haze along the horizon. Keep the lake calm and realistic. Keep the sky mostly open and clean because separate animated cloud layers will be added in the web app. Do not add people, boats, UI panels, captions, logos, extra large buildings, or dramatic clouds. Output should be a production-ready 16:9 photorealistic lake background for a browser-based lyric app.",
+      "medias": [
+        {
+          "data": {
+            "id": "c45acd33-96e2-4e70-9bff-1ffdce4ee254",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/c45acd33-96e2-4e70-9bff-1ffdce4ee254_resize.jpg",
+            "type": "media_input"
+          },
+          "role": "image"
+        }
+      ],
+      "aspect_ratio": "16:9",
+      "quality": "high",
+      "resolution": "2k",
+      "model": "videotape-alpha",
+      "reference_elements": []
+    }
+  }
+]
