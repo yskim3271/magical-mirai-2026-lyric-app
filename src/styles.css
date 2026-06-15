@@ -803,7 +803,7 @@ button {
 .control-dock.collapsed {
   right: clamp(18px, 3vw, 34px);
   left: auto;
-  bottom: clamp(18px, 3vh, 34px);
+  bottom: calc(clamp(18px, 3vh, 34px) + 17px);
   width: auto;
   height: 76px;
   min-width: 0;
@@ -814,6 +814,11 @@ button {
   box-shadow: none;
   backdrop-filter: none;
   transform: none;
+}
+
+.control-dock.collapsed::before,
+.control-dock.collapsed::after {
+  display: none;
 }
 
 .control-dock.collapsed .dock-panel {

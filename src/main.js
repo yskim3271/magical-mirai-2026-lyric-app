@@ -174,6 +174,7 @@ let soundmarkLastProgress = 0;
 let soundmarkCloseTimer = null;
 let debugSoundmarkProgress = DEBUG_SOUNDMARK_DEFAULT_PROGRESS;
 let debugPlaybackActive = false;
+let playbackActive = false;
 let isProgressScrubbing = false;
 
 renderSongList();
@@ -252,16 +253,19 @@ player.addListener({
   },
 
   onPlay() {
+    playbackActive = true;
     lake.setAmbientRipplesEnabled(false);
     updatePlayPauseButton();
   },
 
   onPause() {
+    playbackActive = false;
     lake.setAmbientRipplesEnabled(true);
     updatePlayPauseButton();
   },
 
   onStop() {
+    playbackActive = false;
     lake.setAmbientRipplesEnabled(true);
     lyricChunkCursor = 0;
     previousPosition = 0;
@@ -331,12 +335,11 @@ function togglePlayback() {
 
   if (!readyToPlay) return;
 
-  if (player.isPlaying) {
+  if (isPlaybackActive()) {
     player.requestPause();
   } else {
     player.requestPlay();
   }
-  updatePlayPauseButton();
 }
 
 function stopPlayback() {
@@ -348,7 +351,9 @@ function stopPlayback() {
     return;
   }
 
+  playbackActive = false;
   player.requestStop();
+  updatePlayPauseButton();
 }
 
 function selectAdjacentSong(direction) {
@@ -506,6 +511,7 @@ function selectSong(songId) {
   guidePhrases = [];
   segments = [];
   readyToPlay = false;
+  playbackActive = false;
   lyricChunkCursor = 0;
   previousPosition = 0;
   lastBeatToken = null;
@@ -568,10 +574,14 @@ function updatePlayPauseButton() {
   const icon = $("#play-icon");
   if (!button || !icon) return;
 
-  const playing = DEBUG_SOUNDMARKS ? debugPlaybackActive : Boolean(player.isPlaying);
+  const playing = isPlaybackActive();
   button.setAttribute("aria-label", playing ? "Pause" : "Play");
   button.title = playing ? "Pause" : "Play";
   icon.textContent = playing ? "Ⅱ" : "▶";
+}
+
+function isPlaybackActive() {
+  return DEBUG_SOUNDMARKS ? debugPlaybackActive : playbackActive;
 }
 
 function updateProgressDisplay(progress, { syncSlider = true } = {}) {
