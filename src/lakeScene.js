@@ -270,6 +270,136 @@ const fragmentShader = `
     return tex;
   }
 
+  vec2 toriiPillarContactPoint(float horizon, float aspect, float localX) {
+    vec2 size = toriiSize(aspect);
+    vec2 origin = toriiOrigin(horizon, aspect);
+    return origin + vec2(size.x * localX, size.y * toriiWaterlineLocal());
+  }
+
+  float toriiPillarWaterInfluence(vec2 p, vec2 lake, float horizon, float aspect, float localX) {
+    vec2 size = toriiSize(aspect);
+    vec2 contact = toriiPillarContactPoint(horizon, aspect, localX);
+    vec2 contactLake = lakeCoord(contact, horizon, aspect);
+    float verticalOffset = abs(contact.y - p.y);
+    float axisLake = abs(contactLake.y - lake.y);
+    float waterSide = smoothstep(0.002, 0.014, verticalOffset)
+      * (1.0 - smoothstep(size.y * 1.55, size.y * 3.15, verticalOffset));
+    float travelSide = smoothstep(0.04, 0.46, axisLake)
+      * (1.0 - smoothstep(2.65, 5.40, axisLake));
+    float lateral = 1.0 - smoothstep(size.x * 0.16, size.x * 0.86, abs(p.x - contact.x));
+    return waterSide * travelSide * lateral * uToriiReady;
+  }
+
+  vec2 toriiContinuousWaveReflectionAt(vec2 p, vec2 lake, float horizon, float aspect, float localX, float phaseOffset) {
+    vec2 contact = toriiPillarContactPoint(horizon, aspect, localX);
+    vec2 contactLake = lakeCoord(contact, horizon, aspect);
+    vec2 delta = (lake - contactLake) * vec2(0.88, 1.0);
+    float d = length(delta);
+    float mask = toriiPillarWaterInfluence(p, lake, horizon, aspect, localX) * exp(-d * 0.62);
+
+    float incomingBeatPhase = contactLake.y * 6.4 - uTime * 2.2 + phaseOffset;
+    float beatReflect = sin(d * 7.2 + incomingBeatPhase + 1.35) * uBeatEnergy;
+    float flowReflect = sin(d * 13.0 + contactLake.x * 0.42 + uTime * 0.62 + phaseOffset) * 0.18;
+    float reflected = beatReflect * 0.42 + flowReflect * (0.18 + uBeatEnergy * 0.12);
+    return vec2(reflected, abs(reflected)) * mask;
+  }
+
+  vec2 toriiContinuousWaveReflection(vec2 p, vec2 lake, float horizon, float aspect) {
+    vec2 left = toriiContinuousWaveReflectionAt(p, lake, horizon, aspect, 0.26, 0.0);
+    vec2 right = toriiContinuousWaveReflectionAt(p, lake, horizon, aspect, 0.74, 1.7);
+    return left + right;
+  }
+
+  vec2 toriiRippleReflectionAt(vec2 p, vec2 lake, float horizon, float aspect, vec4 source, float localX, float phaseOffset) {
+    float age = uTime - source.z;
+    float sourceLive = step(0.0, age) * (1.0 - smoothstep(3.7, 5.1, age));
+    vec2 sourceLake = lakeCoord(source.xy, horizon, aspect);
+    float sourceNear = clamp((horizon - source.y) / horizon, 0.0, 1.0);
+    float sourceScale = smoothstep(0.02, 0.96, sourceNear);
+    float speed = mix(0.38, 0.68, source.w);
+    float ringWidth = mix(0.036, 0.104, sourceScale);
+
+    vec2 contact = toriiPillarContactPoint(horizon, aspect, localX);
+    vec2 contactLake = lakeCoord(contact, horizon, aspect);
+    vec2 metric = vec2(0.88, 1.0);
+    vec2 scaledLake = lake * metric;
+    vec2 scaledSource = sourceLake * metric;
+    vec2 scaledContact = contactLake * metric;
+    vec2 virtualSource = scaledContact * 2.0 - scaledSource;
+
+    float sourceToPillar = length(scaledContact - scaledSource);
+    float front = age * speed;
+    float reflectedAge = max((front - sourceToPillar) / max(speed, 0.001), 0.0);
+    float contactHit = smoothstep(-ringWidth * 1.7, ringWidth * 2.2, front - sourceToPillar);
+    float reflectionLive = contactHit * (1.0 - smoothstep(2.9, 4.8, reflectedAge));
+
+    vec2 sourceDir = (scaledSource - scaledContact) / max(sourceToPillar, 0.001);
+    vec2 outDelta = scaledLake - scaledContact;
+    float outDistance = length(outDelta);
+    vec2 outDir = outDelta / max(outDistance, 0.001);
+    float reflectionLobe = pow(max(dot(outDir, sourceDir), 0.0), mix(1.15, 1.85, sourceScale));
+
+    float reflectedDistance = length(scaledLake - virtualSource);
+    float reflectedWidth = ringWidth * mix(1.18, 1.36, sourceScale);
+    float phase = reflectedDistance - front;
+    float envelope = exp(-abs(phase) / reflectedWidth) * exp(-age * 0.40);
+    float ring = sin(phase * mix(54.0, 30.0, sourceScale) + phaseOffset);
+    float sourceSeparation = smoothstep(0.035, 0.42, abs(contactLake.y - sourceLake.y));
+    float sourceApproach = smoothstep(0.08, 0.72, sourceToPillar);
+    float arcBreakup = mix(0.82, 1.0, noise(vec2(reflectedDistance * 1.7 + localX * 9.0, uTime * 0.12)));
+    float mask = toriiPillarWaterInfluence(p, lake, horizon, aspect, localX)
+      * sourceLive * reflectionLive * reflectionLobe * sourceSeparation * sourceApproach * source.w * 0.8 * arcBreakup;
+
+    return vec2(ring * envelope, envelope) * mask;
+  }
+
+  vec2 toriiRippleReflection(vec2 p, vec2 lake, float horizon, float aspect, vec4 source) {
+    vec2 left = toriiRippleReflectionAt(p, lake, horizon, aspect, source, 0.26, 0.0);
+    vec2 right = toriiRippleReflectionAt(p, lake, horizon, aspect, source, 0.74, 1.7);
+    return left + right;
+  }
+
+  float toriiRippleTransmissionShadowAt(vec2 lake, float horizon, float aspect, vec4 source, float localX) {
+    float age = uTime - source.z;
+    float sourceLive = step(0.0, age) * (1.0 - smoothstep(3.7, 5.1, age));
+    vec2 sourceLake = lakeCoord(source.xy, horizon, aspect);
+    float sourceNear = clamp((horizon - source.y) / horizon, 0.0, 1.0);
+    float sourceScale = smoothstep(0.02, 0.96, sourceNear);
+    float speed = mix(0.38, 0.68, source.w);
+    float ringWidth = mix(0.036, 0.104, sourceScale);
+
+    vec2 contact = toriiPillarContactPoint(horizon, aspect, localX);
+    vec2 contactLake = lakeCoord(contact, horizon, aspect);
+    vec2 metric = vec2(0.88, 1.0);
+    vec2 scaledLake = lake * metric;
+    vec2 scaledSource = sourceLake * metric;
+    vec2 scaledContact = contactLake * metric;
+    vec2 sourceToPillar = scaledContact - scaledSource;
+    float sourceToPillarDistance = length(sourceToPillar);
+    vec2 travelDir = sourceToPillar / max(sourceToPillarDistance, 0.001);
+
+    float front = age * speed;
+    float contactHit = smoothstep(-ringWidth * 1.5, ringWidth * 2.4, front - sourceToPillarDistance);
+    vec2 beyond = scaledLake - scaledContact;
+    float forward = dot(beyond, travelDir);
+    float behindPillar = smoothstep(0.025, 0.20, forward)
+      * (1.0 - smoothstep(3.0, 5.2, forward));
+    float lateralDistance = abs(beyond.x * travelDir.y - beyond.y * travelDir.x);
+    float shadowWidth = mix(0.050, 0.090, sourceScale)
+      + smoothstep(0.0, 2.8, forward) * mix(0.080, 0.160, sourceScale);
+    float lateral = 1.0 - smoothstep(shadowWidth, shadowWidth * 2.4, lateralDistance);
+    float sourceApproach = smoothstep(0.08, 0.72, sourceToPillarDistance);
+    float strength = clamp(source.w * 0.82, 0.18, 1.0);
+
+    return sourceLive * contactHit * behindPillar * lateral * sourceApproach * strength * uToriiReady;
+  }
+
+  float toriiRippleTransmissionShadow(vec2 lake, float horizon, float aspect, vec4 source) {
+    float left = toriiRippleTransmissionShadowAt(lake, horizon, aspect, source, 0.26);
+    float right = toriiRippleTransmissionShadowAt(lake, horizon, aspect, source, 0.74);
+    return clamp(left + right, 0.0, 1.0);
+  }
+
   vec4 sampleToriiReflection(vec2 p, float horizon, float aspect, float wave, float farDepth) {
     vec2 size = toriiSize(aspect);
     vec2 origin = toriiOrigin(horizon, aspect);
@@ -448,11 +578,17 @@ const fragmentShader = `
       float envelope = exp(-abs(d - front) / ringWidth) * exp(-age * 0.36);
       float ring = sin((d - front) * mix(62.0, 34.0, sourceScale));
       float distanceFade = mix(0.28, 1.0, sourceScale);
-      ripple += ring * envelope * live * source.w * distanceFade;
-      rippleGlow += envelope * live * source.w * distanceFade;
+      float transmission = 1.0 - toriiRippleTransmissionShadow(lake, horizon, aspect, source) * 0.14;
+      ripple += ring * envelope * live * source.w * distanceFade * transmission;
+      rippleGlow += envelope * live * source.w * distanceFade * transmission;
+      vec2 reflectedRipple = toriiRippleReflection(uv, lake, horizon, aspect, source);
+      ripple += reflectedRipple.x;
+      rippleGlow += reflectedRipple.y * 0.72;
     }
 
     float beatWave = sin(lake.y * 6.4 - uTime * 2.2) * uBeatEnergy * mix(0.36, 0.92, nearCurve);
+    vec2 toriiWaveReflection = toriiContinuousWaveReflection(uv, lake, horizon, aspect);
+    wave += toriiWaveReflection.x * mix(0.006, 0.017, nearCurve);
     float sunPath = exp(-abs(uv.x - 0.78) * 15.0) * smoothstep(horizon, 0.02, uv.y);
     float perspectiveLine = smoothstep(0.965, 1.0, sin(lake.y * 11.0 + waveNoise * 2.0) * 0.5 + 0.5);
     float sparkleSeed = noise(vec2(lake.x * 26.0 + uTime * 0.7, lake.y * 18.0));
@@ -501,9 +637,10 @@ const fragmentShader = `
     water = mix(water, cloudColor, reflectedCloud * (0.06 + sunset * 0.035 + twilight * 0.020));
     water += vec3(0.64, 1.0, 0.98) * perspectiveLine * mix(0.010, 0.050, nearCurve);
     water += vec3(1.0, 0.66, 0.20) * sunPath * (0.055 + sunset * 0.070 + sparkle * 0.18) * (1.0 - night * 0.86);
+    water += vec3(0.48, 0.94, 1.0) * toriiWaveReflection.y * (0.030 + uBeatEnergy * 0.060);
     water += vec3(0.42, 0.95, 1.0) * abs(ripple) * (0.24 + uAmplitude * 0.72);
     water += vec3(1.0, 0.88, 0.35) * rippleGlow * (0.10 + uChorus * 0.24);
-    water += vec3(0.50, 0.94, 1.0) * beatWave * 0.040;
+    water += vec3(0.50, 0.94, 1.0) * beatWave * 0.070;
     water += mix(vec3(1.0, 0.93, 0.45), vec3(0.55, 0.82, 1.0), night) * sparkle * (0.10 + uChorus * 0.12 + night * 0.10);
     float shorelineLock = smoothstep(horizon - 0.050, horizon - 0.008, uv.y) * uBackdropReady;
     water = mix(water, photoWater, shorelineLock * 0.32);
@@ -528,8 +665,6 @@ const fragmentShader = `
 
     float vignette = smoothstep(0.92, 0.24, distance(uv, vec2(0.5, 0.48)));
     color *= mix(0.72, 1.06, vignette);
-    color += vec3(0.98, 0.80, 0.26) * uChorus * sun * 0.16;
-
     gl_FragColor = vec4(clamp(color, 0.0, 1.0), 1.0);
   }
 `;
