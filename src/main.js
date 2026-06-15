@@ -1,6 +1,7 @@
 import { createLakeScene } from "./lakeScene.js";
 import { SONGS, findSong } from "./songs.js";
-import { buildLyricChunks, collectPhrases, collectSegments, collectWords, formatTime } from "./lyrics.js";
+import { SOUNDMARKS } from "./soundmarks.js";
+import { buildLyricChunks, collectPhrases, collectSegments, collectWords } from "./lyrics.js";
 import { createTextAlivePlayer, loadSong } from "./textalive.js";
 
 const $ = (selector) => document.querySelector(selector);
@@ -31,9 +32,32 @@ const TORII_REFLECTION_PILLAR_LOCAL_X = [0.26, 0.74];
 const TORII_EXCLUSION_MARGIN_X = 0.045;
 const TORII_EXCLUSION_SCREEN_TOP = 0.33;
 const TORII_EXCLUSION_SCREEN_BOTTOM = 0.58;
+const SOUNDMARK_PANEL_EXCLUSION_LEFT = 0.665;
+const SOUNDMARK_PANEL_EXCLUSION_RIGHT = 0.995;
+const SOUNDMARK_PANEL_EXCLUSION_BOTTOM = 0.13;
+const SOUNDMARK_PANEL_EXCLUSION_TOP = 0.90;
+const SOUNDMARK_PLACEMENT_LEFT = 0.12;
+const SOUNDMARK_PLACEMENT_RIGHT = 0.76;
+const SOUNDMARK_PLACEMENT_TOP = 0.50;
+const SOUNDMARK_PLACEMENT_FALLBACK_BOTTOM = 0.22;
+const SOUNDMARK_PLACEMENT_DOCK_MARGIN_PX = 24;
+const SOUNDMARK_PIN_HALF_WIDTH_PX = 30;
+const SOUNDMARK_PIN_HALF_HEIGHT_PX = 38;
+const SOUNDMARK_PLACEMENT_CANDIDATE_COUNT = 24;
+const SOUNDMARK_REWIND_RESET_DELTA = 0.08;
 const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug");
 const DEBUG_TORII_EXCLUSION_ZONE = DEBUG_MODE === "torii-zone";
 const DEBUG_TORII_REFLECTION = DEBUG_MODE === "torii-reflection";
+const DEBUG_SOUNDMARKS = DEBUG_MODE === "soundmarks";
+const DEBUG_SOUNDMARK_DEFAULT_PROGRESS = 0.58;
+const DEBUG_PLAYER_DURATION_MS = 298000;
+const PROGRESS_SCALE = 1000;
+const DEBUG_SOUNDMARK_PHASES = [
+  { label: "Day", progress: 0.06 },
+  { label: "Sunset", progress: 0.34 },
+  { label: "Twilight", progress: 0.58 },
+  { label: "Night", progress: 0.86 },
+];
 const LYRIC_GUIDE_PALETTES = {
   day: {
     ink: [250, 255, 255, 0.96],
@@ -72,6 +96,60 @@ const LYRIC_GUIDE_PALETTES = {
     chorusGlow: [255, 219, 116, 0.20],
   },
 };
+const SOUNDMARK_PALETTES = {
+  day: {
+    panelBg: [214, 250, 255, 0.075],
+    panelBgDeep: [16, 76, 96, 0.105],
+    border: [236, 255, 255, 0.720],
+    ink: [246, 255, 255, 0.960],
+    muted: [221, 248, 250, 0.760],
+    accent: [125, 241, 237, 0.820],
+    glow: [92, 224, 229, 0.360],
+    caustic: [255, 255, 255, 0.260],
+    pin: [232, 255, 255, 0.940],
+    ring: [104, 238, 236, 0.460],
+    core: [255, 255, 255, 0.880],
+  },
+  sunset: {
+    panelBg: [255, 206, 155, 0.085],
+    panelBgDeep: [98, 54, 42, 0.115],
+    border: [255, 226, 154, 0.700],
+    ink: [255, 247, 229, 0.960],
+    muted: [255, 230, 194, 0.780],
+    accent: [255, 217, 127, 0.900],
+    glow: [255, 171, 83, 0.380],
+    caustic: [255, 221, 148, 0.280],
+    pin: [255, 238, 183, 0.950],
+    ring: [255, 200, 102, 0.500],
+    core: [255, 250, 226, 0.900],
+  },
+  twilight: {
+    panelBg: [166, 154, 255, 0.080],
+    panelBgDeep: [42, 54, 110, 0.130],
+    border: [216, 205, 255, 0.700],
+    ink: [245, 244, 255, 0.960],
+    muted: [219, 216, 249, 0.780],
+    accent: [199, 189, 255, 0.880],
+    glow: [146, 120, 255, 0.360],
+    caustic: [220, 213, 255, 0.270],
+    pin: [222, 220, 255, 0.950],
+    ring: [175, 159, 255, 0.500],
+    core: [250, 248, 255, 0.900],
+  },
+  night: {
+    panelBg: [52, 104, 160, 0.075],
+    panelBgDeep: [8, 24, 48, 0.170],
+    border: [178, 224, 255, 0.720],
+    ink: [234, 247, 255, 0.970],
+    muted: [185, 218, 244, 0.800],
+    accent: [139, 222, 255, 0.880],
+    glow: [91, 180, 255, 0.400],
+    caustic: [164, 225, 255, 0.280],
+    pin: [205, 238, 255, 0.960],
+    ring: [108, 204, 255, 0.520],
+    core: [244, 252, 255, 0.920],
+  },
+};
 
 const lake = createLakeScene($("#lake-scene"));
 const player = createTextAlivePlayer($("#media"));
@@ -89,17 +167,33 @@ let previousPosition = 0;
 let lastBeatToken = null;
 let previousLyricPosition = null;
 let activeGuidePhraseKey = null;
+const spawnedSoundmarkIds = new Set();
+const soundmarkPositions = new Map();
+let activeSoundmarkId = null;
+let soundmarkLastProgress = 0;
+let soundmarkCloseTimer = null;
+let debugSoundmarkProgress = DEBUG_SOUNDMARK_DEFAULT_PROGRESS;
+let debugPlaybackActive = false;
+let isProgressScrubbing = false;
 
 renderSongList();
 bindControls();
 restoreDockState();
 initializeVolumeControl();
+initializeSoundmarks();
+initializeSoundmarkDebugMode();
+initializeSoundmarkPlacementOverlay();
 initializeToriiExclusionZoneOverlay();
 initializeToriiReflectionOverlay();
 setTransportEnabled(false);
 
 player.addListener({
   onAppReady(app) {
+    if (DEBUG_SOUNDMARKS) {
+      $("#status").textContent = "Soundmark debug mode. Playback is not required.";
+      return;
+    }
+
     $("#status").textContent = app.managed
       ? "Waiting for the TextAlive host song..."
       : "Ready. Choose a target song.";
@@ -123,10 +217,11 @@ player.addListener({
     lastBeatToken = null;
     previousLyricPosition = null;
     activeGuidePhraseKey = null;
+    resetSoundmarks();
 
     $("#song-title").textContent = song.name || activeSong?.title || "-";
     $("#song-artist").textContent = song.artist?.name || activeSong?.artist || "-";
-    $("#now-duration").textContent = formatTime(video.duration);
+    $("#now-duration").textContent = formatPlayerTime(video.duration);
     $("#status").textContent = `${phrases.length} phrases / ${lyricWords.length} words / ${lyricChunks.length} chunks loaded`;
 
     setTransportEnabled(readyToPlay);
@@ -158,10 +253,12 @@ player.addListener({
 
   onPlay() {
     lake.setAmbientRipplesEnabled(false);
+    updatePlayPauseButton();
   },
 
   onPause() {
     lake.setAmbientRipplesEnabled(true);
+    updatePlayPauseButton();
   },
 
   onStop() {
@@ -171,7 +268,9 @@ player.addListener({
     lastBeatToken = null;
     previousLyricPosition = null;
     activeGuidePhraseKey = null;
+    resetSoundmarks();
     updatePlayback(0);
+    updatePlayPauseButton();
   },
 });
 
@@ -184,24 +283,137 @@ function renderSongList() {
     button.type = "button";
     button.className = "song-card";
     button.dataset.songId = song.id;
+    button.setAttribute("role", "option");
+    button.setAttribute("aria-selected", "false");
     button.innerHTML = `
       <span>${song.award}</span>
       <strong>${song.title}</strong>
       <em>${song.artist}</em>
     `;
-    button.addEventListener("click", () => selectSong(song.id));
+    button.addEventListener("click", () => {
+      selectSong(song.id);
+      setSongMenuOpen(false);
+    });
     list.appendChild(button);
   }
 }
 
 function bindControls() {
-  $("#btn-play").addEventListener("click", () => player.requestPlay());
-  $("#btn-pause").addEventListener("click", () => player.requestPause());
-  $("#btn-stop").addEventListener("click", () => player.requestStop());
+  $("#btn-play").addEventListener("click", togglePlayback);
+  $("#btn-stop").addEventListener("click", stopPlayback);
+  $("#btn-prev-song").addEventListener("click", () => selectAdjacentSong(-1));
+  $("#btn-next-song").addEventListener("click", () => selectAdjacentSong(1));
+  $("#btn-song-menu").addEventListener("click", (event) => {
+    event.stopPropagation();
+    setSongMenuOpen($("#song-list").hidden);
+  });
   $("#btn-toggle-dock").addEventListener("click", toggleDock);
   $("#volume-slider").addEventListener("input", (event) => {
     setVolume(event.currentTarget.value, { persist: true });
   });
+  $("#progress-slider").addEventListener("input", handleProgressInput);
+  $("#progress-slider").addEventListener("change", handleProgressCommit);
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".song-select")) setSongMenuOpen(false);
+  });
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setSongMenuOpen(false);
+  });
+}
+
+function togglePlayback() {
+  if (DEBUG_SOUNDMARKS) {
+    debugPlaybackActive = !debugPlaybackActive;
+    lake.setAmbientRipplesEnabled(!debugPlaybackActive);
+    updatePlayPauseButton();
+    return;
+  }
+
+  if (!readyToPlay) return;
+
+  if (player.isPlaying) {
+    player.requestPause();
+  } else {
+    player.requestPlay();
+  }
+  updatePlayPauseButton();
+}
+
+function stopPlayback() {
+  if (DEBUG_SOUNDMARKS) {
+    debugPlaybackActive = false;
+    lake.setAmbientRipplesEnabled(true);
+    setDebugSoundmarkProgress(debugSoundmarkProgress);
+    updatePlayPauseButton();
+    return;
+  }
+
+  player.requestStop();
+}
+
+function selectAdjacentSong(direction) {
+  if (!activeSong) {
+    selectSong(SONGS[0].id);
+    return;
+  }
+
+  const currentIndex = Math.max(0, SONGS.findIndex((song) => song.id === activeSong.id));
+  const nextIndex = (currentIndex + direction + SONGS.length) % SONGS.length;
+  selectSong(SONGS[nextIndex].id);
+}
+
+function setSongMenuOpen(open) {
+  const list = $("#song-list");
+  const button = $("#btn-song-menu");
+  if (!list || !button) return;
+
+  list.hidden = !open;
+  button.setAttribute("aria-expanded", String(open));
+  button.classList.toggle("is-open", open);
+}
+
+function handleProgressInput(event) {
+  const progress = clamp(Number(event.currentTarget.value) / PROGRESS_SCALE, 0, 1);
+  isProgressScrubbing = true;
+  updateProgressDisplay(progress, { syncSlider: false });
+
+  if (DEBUG_SOUNDMARKS) {
+    setDebugSoundmarkProgress(progress);
+    return;
+  }
+
+  const duration = player.video?.duration ?? 0;
+  if (duration > 0) $("#now-position").textContent = formatPlayerTime(progress * duration);
+}
+
+function handleProgressCommit(event) {
+  const progress = clamp(Number(event.currentTarget.value) / PROGRESS_SCALE, 0, 1);
+  isProgressScrubbing = false;
+
+  if (DEBUG_SOUNDMARKS) {
+    setDebugSoundmarkProgress(progress);
+    return;
+  }
+
+  seekToProgress(progress);
+}
+
+function seekToProgress(progress) {
+  const duration = player.video?.duration ?? 0;
+  if (!readyToPlay || duration <= 0) return;
+
+  const position = clamp(progress, 0, 1) * duration;
+  player.requestMediaSeek(position);
+  updatePlayback(position);
+}
+
+function formatPlayerTime(ms) {
+  if (ms == null || Number.isNaN(ms)) return "-";
+
+  const safeMs = Math.max(0, Number(ms));
+  const minutes = Math.floor(safeMs / 60000);
+  const seconds = Math.floor((safeMs % 60000) / 1000);
+  return `${minutes}:${String(seconds).padStart(2, "0")}`;
 }
 
 function initializeVolumeControl() {
@@ -278,8 +490,12 @@ function toggleDock() {
 function setDockCollapsed(collapsed) {
   $("#control-dock").classList.toggle("collapsed", collapsed);
   $("#app").classList.toggle("dock-collapsed", collapsed);
-  $("#btn-toggle-dock").textContent = collapsed ? "Show controls" : "Hide panel";
+  $("#btn-toggle-dock").title = collapsed ? "Show controls" : "Hide controls";
+  $("#btn-toggle-dock").setAttribute("aria-label", collapsed ? "Show controls" : "Hide controls");
   $("#btn-toggle-dock").setAttribute("aria-expanded", String(!collapsed));
+  if (collapsed) setSongMenuOpen(false);
+  scheduleAnimationFrame(updateSoundmarkPlacementOverlay);
+  setTimeout(updateSoundmarkPlacementOverlay, 220);
 }
 
 function selectSong(songId) {
@@ -295,38 +511,77 @@ function selectSong(songId) {
   lastBeatToken = null;
   previousLyricPosition = null;
   activeGuidePhraseKey = null;
+  resetSoundmarks();
 
   setTransportEnabled(false);
   markActiveSong();
   resetDisplay();
-  $("#status").textContent = `Loading ${activeSong.title}...`;
+  if (DEBUG_SOUNDMARKS) {
+    $("#status").textContent = "Soundmark debug mode. Playback is not required.";
+    setDebugSoundmarkProgress(debugSoundmarkProgress);
+    showDebugSoundmarks();
+    return;
+  }
 
+  $("#status").textContent = `Loading ${activeSong.title}...`;
   loadSong(player, activeSong);
 }
 
 function markActiveSong() {
   document.querySelectorAll(".song-card").forEach((button) => {
-    button.classList.toggle("active", button.dataset.songId === activeSong?.id);
+    const active = button.dataset.songId === activeSong?.id;
+    button.classList.toggle("active", active);
+    button.setAttribute("aria-selected", String(active));
   });
 }
 
 function resetDisplay() {
   $("#song-title").textContent = activeSong.title;
   $("#song-artist").textContent = activeSong.artist;
-  $("#now-position").textContent = formatTime(0);
+  $("#now-position").textContent = formatPlayerTime(0);
   $("#now-duration").textContent = "-";
   $("#beat-label").textContent = "-";
   $("#chorus-label").textContent = "-";
   $("#amp-label").textContent = "-";
-  $("#progress-bar").style.width = "0%";
+  updateProgressDisplay(0);
+  updatePlayPauseButton();
   lake.setAudioState({ amplitude: 0, chorus: false });
   lake.setSongProgress(0);
   resetLyricGuide();
+  resetSoundmarks();
 }
 
 function setTransportEnabled(enabled) {
-  for (const id of ["#btn-play", "#btn-pause", "#btn-stop"]) {
-    $(id).disabled = !enabled;
+  const transportEnabled = enabled || DEBUG_SOUNDMARKS;
+  for (const id of ["#btn-play", "#btn-stop"]) {
+    const button = $(id);
+    if (button) button.disabled = !transportEnabled;
+  }
+
+  const progressSlider = $("#progress-slider");
+  if (progressSlider) progressSlider.disabled = !transportEnabled;
+  updatePlayPauseButton();
+}
+
+function updatePlayPauseButton() {
+  const button = $("#btn-play");
+  const icon = $("#play-icon");
+  if (!button || !icon) return;
+
+  const playing = DEBUG_SOUNDMARKS ? debugPlaybackActive : Boolean(player.isPlaying);
+  button.setAttribute("aria-label", playing ? "Pause" : "Play");
+  button.title = playing ? "Pause" : "Play";
+  icon.textContent = playing ? "Ⅱ" : "▶";
+}
+
+function updateProgressDisplay(progress, { syncSlider = true } = {}) {
+  const clampedProgress = clamp(progress, 0, 1);
+  const progressBar = $("#progress-bar");
+  if (progressBar) progressBar.style.width = `${clampedProgress * 100}%`;
+
+  const slider = $("#progress-slider");
+  if (slider && syncSlider && !isProgressScrubbing) {
+    slider.value = String(Math.round(clampedProgress * PROGRESS_SCALE));
   }
 }
 
@@ -345,14 +600,15 @@ function updatePlayback(position) {
 
   previousPosition = position;
 
-  $("#now-position").textContent = formatTime(position);
-  $("#progress-bar").style.width = `${progress * 100}%`;
+  if (!isProgressScrubbing) $("#now-position").textContent = formatPlayerTime(position);
+  updateProgressDisplay(progress);
   $("#beat-label").textContent = beat ? `${beat.position}/${beat.length}` : "-";
   $("#chorus-label").textContent = chorus ? "on" : "off";
   $("#amp-label").textContent = amplitude.toFixed(2);
 
   lake.setAudioState({ amplitude, chorus: Boolean(chorus) });
   lake.setSongProgress(progress);
+  updateSoundmarkSystem(progress);
   updateLyricGuide(position, progress, Boolean(chorus));
   pulseBeatIfNeeded(beat, position, amplitude);
   spawnDueLyricChunks(position, amplitude, Boolean(chorus));
@@ -527,6 +783,510 @@ function resetLyricGuide() {
   activeGuidePhraseKey = null;
 }
 
+function initializeSoundmarks() {
+  $("#soundmark-close")?.addEventListener("click", closeSoundmarkPanel);
+  applySoundmarkPalette(0);
+  closeSoundmarkPanel({ immediate: true });
+}
+
+function initializeSoundmarkDebugMode() {
+  if (!DEBUG_SOUNDMARKS) return;
+
+  $("#app")?.classList.add("debug-soundmarks");
+  activeSong = activeSong ?? SONGS[0];
+  $("#song-title").textContent = activeSong.title;
+  $("#song-artist").textContent = activeSong.artist;
+  readyToPlay = false;
+  setTransportEnabled(false);
+  setDockCollapsed(false);
+  markActiveSong();
+  renderSoundmarkDebugTools();
+  setDebugSoundmarkProgress(DEBUG_SOUNDMARK_DEFAULT_PROGRESS);
+  showDebugSoundmarks();
+  openSoundmarkPanel(SOUNDMARKS[0]);
+  $("#status").textContent = "Soundmark debug mode. Playback is not required.";
+}
+
+function renderSoundmarkDebugTools() {
+  const app = $("#app");
+  if (!app || $("#soundmark-debug-tools")) return;
+
+  const tools = document.createElement("section");
+  tools.id = "soundmark-debug-tools";
+  tools.className = "soundmark-debug-tools";
+  tools.setAttribute("aria-label", "soundmark debug tools");
+
+  const label = document.createElement("span");
+  label.className = "soundmark-debug-label";
+  label.textContent = "Soundmark debug";
+  tools.appendChild(label);
+
+  for (const phase of DEBUG_SOUNDMARK_PHASES) {
+    const button = document.createElement("button");
+    button.type = "button";
+    button.dataset.progress = String(phase.progress);
+    button.textContent = phase.label;
+    button.addEventListener("click", () => setDebugSoundmarkProgress(phase.progress));
+    tools.appendChild(button);
+  }
+
+  const closeButton = document.createElement("button");
+  closeButton.type = "button";
+  closeButton.textContent = "Close panel";
+  closeButton.addEventListener("click", () => closeSoundmarkPanel());
+  tools.appendChild(closeButton);
+
+  app.appendChild(tools);
+}
+
+function setDebugSoundmarkProgress(progress) {
+  debugSoundmarkProgress = clamp(progress, 0, 1);
+  soundmarkLastProgress = debugSoundmarkProgress;
+  $("#now-position").textContent = formatPlayerTime(debugSoundmarkProgress * DEBUG_PLAYER_DURATION_MS);
+  $("#now-duration").textContent = formatPlayerTime(DEBUG_PLAYER_DURATION_MS);
+  updateProgressDisplay(debugSoundmarkProgress);
+  lake.setSongProgress(debugSoundmarkProgress);
+  lake.setAudioState({
+    amplitude: 0.36,
+    chorus: debugSoundmarkProgress >= 0.42 && debugSoundmarkProgress <= 0.72,
+  });
+  applySoundmarkPalette(debugSoundmarkProgress);
+  renderDebugLyricGuide(debugSoundmarkProgress);
+  updateSoundmarkDebugTools();
+}
+
+function updateSoundmarkDebugTools() {
+  const tools = $("#soundmark-debug-tools");
+  if (!tools) return;
+
+  tools.querySelectorAll("button[data-progress]").forEach((button) => {
+    const progress = Number(button.dataset.progress);
+    button.classList.toggle("active", Math.abs(progress - debugSoundmarkProgress) < 0.001);
+  });
+}
+
+function showDebugSoundmarks() {
+  resetSoundmarkMarkers();
+  soundmarkLastProgress = debugSoundmarkProgress;
+  for (const soundmark of SOUNDMARKS) {
+    spawnSoundmarkMarker(soundmark);
+  }
+}
+
+function renderDebugLyricGuide(progress) {
+  const guide = $("#lyric-guide");
+  if (!guide) return;
+
+  activeGuidePhraseKey = "debug-soundmark-guide";
+  applyLyricGuidePalette(guide, progress);
+  guide.dataset.phase = getLyricGuidePhaseLabel(progress);
+  guide.classList.remove("is-empty");
+  guide.classList.toggle("chorus", progress >= 0.42 && progress <= 0.72);
+  renderLyricGuidePhrase({
+    key: activeGuidePhraseKey,
+    text: "湖面に映る、音のしるし",
+    startTime: 0,
+    endTime: 6000,
+    words: [
+      { text: "湖面に", startTime: 0, endTime: 1200, language: "ja" },
+      { text: "映る、", startTime: 1200, endTime: 2400, language: "ja" },
+      { text: "音の", startTime: 2400, endTime: 3600, language: "ja" },
+      { text: "しるし", startTime: 3600, endTime: 5200, language: "ja" },
+    ],
+  });
+  guide.setAttribute("aria-label", "湖面に映る、音のしるし");
+}
+
+function updateSoundmarkSystem(progress) {
+  const clampedProgress = clamp(progress, 0, 1);
+  applySoundmarkPalette(clampedProgress);
+
+  if (!activeSong || !player.video?.duration) return;
+
+  if (clampedProgress + SOUNDMARK_REWIND_RESET_DELTA < soundmarkLastProgress) {
+    resetSoundmarkMarkers();
+  }
+
+  soundmarkLastProgress = clampedProgress;
+
+  for (const soundmark of SOUNDMARKS) {
+    if (soundmark.progress <= clampedProgress + 0.006) {
+      spawnSoundmarkMarker(soundmark);
+    }
+  }
+}
+
+function resetSoundmarks() {
+  soundmarkLastProgress = 0;
+  resetSoundmarkMarkers();
+  closeSoundmarkPanel({ immediate: true });
+}
+
+function resetSoundmarkMarkers() {
+  spawnedSoundmarkIds.clear();
+  soundmarkPositions.clear();
+  $("#soundmark-layer")?.replaceChildren();
+  closeSoundmarkPanel({ immediate: true });
+}
+
+function spawnSoundmarkMarker(soundmark) {
+  if (spawnedSoundmarkIds.has(soundmark.id)) return;
+
+  const layer = $("#soundmark-layer");
+  if (!layer) return;
+
+  const position = getSoundmarkPosition(soundmark);
+  const marker = document.createElement("button");
+  marker.type = "button";
+  marker.className = "soundmark-pin";
+  marker.dataset.soundmarkId = soundmark.id;
+  marker.style.left = `${position.x * 100}%`;
+  marker.style.top = `${(1 - position.y) * 100}%`;
+  marker.setAttribute("aria-label", `Open soundmark: ${soundmark.title}`);
+  marker.title = soundmark.title;
+
+  const symbol = document.createElement("span");
+  symbol.className = "soundmark-symbol";
+  symbol.textContent = soundmark.symbol;
+  marker.appendChild(symbol);
+
+  marker.addEventListener("click", (event) => {
+    event.stopPropagation();
+    lake.addRipple(position.x, position.y, 0.62);
+    openSoundmarkPanel(soundmark);
+  });
+
+  layer.appendChild(marker);
+  spawnedSoundmarkIds.add(soundmark.id);
+  soundmarkPositions.set(soundmark.id, position);
+  lake.addRipple(position.x, position.y, 0.24);
+
+  scheduleAnimationFrame(() => marker.classList.add("is-visible"));
+}
+
+function getSoundmarkPosition(soundmark) {
+  const cached = soundmarkPositions.get(soundmark.id);
+  if (cached) return cached;
+
+  const seed = hashString(`${activeSong?.id ?? "song"}-${soundmark.id}`);
+  const placementRect = getSoundmarkPlacementRect();
+  const forbiddenZones = getSoundmarkPlacementForbiddenZones();
+  const idealPosition = createSoundmarkPlacementCandidate(soundmark, seed, placementRect, 0);
+  let bestCandidate = idealPosition;
+  let bestScore = -Infinity;
+
+  for (let attempt = 0; attempt < SOUNDMARK_PLACEMENT_CANDIDATE_COUNT; attempt += 1) {
+    const candidate = createSoundmarkPlacementCandidate(soundmark, seed, placementRect, attempt);
+    const score = getSoundmarkPlacementCandidateScore(candidate, idealPosition, forbiddenZones);
+    if (score > bestScore) {
+      bestCandidate = candidate;
+      bestScore = score;
+    }
+  }
+
+  return bestCandidate;
+}
+
+function createSoundmarkPlacementCandidate(soundmark, seed, placementRect, attempt) {
+  if (attempt === 0) {
+    const x = clamp(
+      soundmark.x + (randomUnit(seed, 1) - 0.5) * 0.052,
+      placementRect.left,
+      placementRect.right,
+    );
+    const rawY = soundmark.y + (randomUnit(seed, 2) - 0.5) * 0.040;
+    const liftedY = rawY < placementRect.bottom
+      ? placementRect.bottom + randomUnit(seed, 3) * Math.min(0.09, placementRect.top - placementRect.bottom)
+      : rawY;
+    const y = clamp(liftedY, placementRect.bottom, placementRect.top);
+    return { x, y };
+  }
+
+  const candidateSeed = hashString(`${seed}-${attempt}`);
+  const x = clamp(
+    placementRect.left + randomUnit(candidateSeed, 1) * (placementRect.right - placementRect.left),
+    placementRect.left,
+    placementRect.right,
+  );
+  const y = clamp(
+    placementRect.bottom + randomUnit(candidateSeed, 2) * (placementRect.top - placementRect.bottom),
+    placementRect.bottom,
+    placementRect.top,
+  );
+
+  return { x, y };
+}
+
+function getSoundmarkPlacementCandidateScore(candidate, idealPosition, forbiddenZones) {
+  const insideForbiddenZone = forbiddenZones.some((zone) => isInsideRect(candidate, zone.rect));
+  const dx = candidate.x - idealPosition.x;
+  const dy = candidate.y - idealPosition.y;
+  const idealDistancePenalty = (dx * dx + dy * dy) * 80;
+  const avoidScore = forbiddenZones.reduce((score, zone) => score + getRectAvoidScore(candidate, zone.rect), 0);
+  return (insideForbiddenZone ? -100 : 100) + Math.min(avoidScore, 12) * 0.02 - idealDistancePenalty;
+}
+
+function getRectAvoidScore(position, rect) {
+  const outsideDx = Math.max(rect.left - position.x, 0, position.x - rect.right);
+  const outsideDy = Math.max(rect.bottom - position.y, 0, position.y - rect.top);
+
+  if (outsideDx > 0 || outsideDy > 0) {
+    return 4 + outsideDx * outsideDx + outsideDy * outsideDy;
+  }
+
+  const halfWidth = Math.max((rect.right - rect.left) * 0.5, 0.001);
+  const halfHeight = Math.max((rect.top - rect.bottom) * 0.5, 0.001);
+  const centerX = (rect.left + rect.right) * 0.5;
+  const centerY = (rect.bottom + rect.top) * 0.5;
+  const dx = Math.abs(position.x - centerX) / halfWidth;
+  const dy = Math.abs(position.y - centerY) / halfHeight;
+  return dx * dx + dy * dy;
+}
+
+function isInsideRect(position, rect) {
+  return rect.left <= position.x
+    && position.x <= rect.right
+    && rect.bottom <= position.y
+    && position.y <= rect.top;
+}
+
+function getSoundmarkPlacementRect() {
+  const app = $("#app");
+  const dock = $("#control-dock");
+  const appRect = app?.getBoundingClientRect();
+  const dockRect = dock?.getBoundingClientRect();
+  const appHeight = appRect?.height || window.innerHeight || 1;
+  let bottom = SOUNDMARK_PLACEMENT_FALLBACK_BOTTOM;
+
+  if (appRect && dockRect && appHeight > 0) {
+    const dockTopInApp = clamp(dockRect.top - appRect.top, 0, appHeight);
+    bottom = (appHeight - dockTopInApp + SOUNDMARK_PLACEMENT_DOCK_MARGIN_PX + SOUNDMARK_PIN_HALF_HEIGHT_PX) / appHeight;
+  }
+
+  bottom = clamp(bottom, 0.08, SOUNDMARK_PLACEMENT_TOP - 0.04);
+
+  return {
+    left: SOUNDMARK_PLACEMENT_LEFT,
+    right: SOUNDMARK_PLACEMENT_RIGHT,
+    bottom,
+    top: SOUNDMARK_PLACEMENT_TOP,
+  };
+}
+
+function getSoundmarkPlacementForbiddenZones() {
+  const toriiRect = getToriiExclusionRect();
+  const panelRect = getSoundmarkPanelExclusionRect();
+  return [
+    {
+      id: "torii",
+      label: "No marker: Torii",
+      rect: expandSoundmarkRectForPin(toriiRect),
+      displayRect: toriiRect,
+    },
+    {
+      id: "panel",
+      label: "No marker: Panel",
+      rect: expandSoundmarkRectForPin(panelRect),
+      displayRect: panelRect,
+    },
+  ];
+}
+
+function expandSoundmarkRectForPin(rect) {
+  const halfSize = getSoundmarkPinHalfSize();
+  return {
+    left: rect.left - halfSize.x,
+    right: rect.right + halfSize.x,
+    bottom: rect.bottom - halfSize.y,
+    top: rect.top + halfSize.y,
+  };
+}
+
+function getSoundmarkPinHalfSize() {
+  const appRect = $("#app")?.getBoundingClientRect();
+  const appWidth = appRect?.width || window.innerWidth || 1;
+  const appHeight = appRect?.height || window.innerHeight || 1;
+  return {
+    x: SOUNDMARK_PIN_HALF_WIDTH_PX / appWidth,
+    y: SOUNDMARK_PIN_HALF_HEIGHT_PX / appHeight,
+  };
+}
+
+function initializeSoundmarkPlacementOverlay() {
+  const overlay = $("#soundmark-placement-overlay");
+  if (!overlay) return;
+
+  if (!DEBUG_SOUNDMARKS) {
+    overlay.hidden = true;
+    return;
+  }
+
+  ensureSoundmarkPlacementOverlayContent(overlay);
+  updateSoundmarkPlacementOverlay();
+  window.addEventListener("resize", updateSoundmarkPlacementOverlay);
+}
+
+function updateSoundmarkPlacementOverlay() {
+  const overlay = $("#soundmark-placement-overlay");
+  if (!overlay || !DEBUG_SOUNDMARKS) return;
+
+  ensureSoundmarkPlacementOverlayContent(overlay);
+  const rect = getSoundmarkPlacementRect();
+  const visibleArea = overlay.querySelector(".soundmark-placement-visible");
+  const forbiddenZones = getSoundmarkPlacementForbiddenZones();
+
+  overlay.hidden = false;
+  setSoundmarkOverlayRect(visibleArea, expandSoundmarkRectForPin(rect));
+  visibleArea.dataset.bounds = [
+    `center x ${(rect.left * 100).toFixed(0)}-${(rect.right * 100).toFixed(0)}%`,
+    `center y ${(rect.bottom * 100).toFixed(0)}-${(rect.top * 100).toFixed(0)}%`,
+  ].join(" / ");
+
+  for (const zone of forbiddenZones) {
+    const element = overlay.querySelector(`[data-zone="${zone.id}"]`);
+    if (!element) continue;
+    element.dataset.label = zone.label;
+    setSoundmarkOverlayRect(element, zone.displayRect);
+  }
+}
+
+function ensureSoundmarkPlacementOverlayContent(overlay) {
+  if (overlay.dataset.ready === "true") return;
+
+  overlay.innerHTML = `
+    <div class="soundmark-placement-visible"></div>
+    <div class="soundmark-placement-forbidden soundmark-placement-forbidden-torii" data-zone="torii"></div>
+    <div class="soundmark-placement-forbidden soundmark-placement-forbidden-panel" data-zone="panel"></div>
+  `;
+  overlay.dataset.ready = "true";
+}
+
+function setSoundmarkOverlayRect(element, rect) {
+  if (!element) return;
+
+  const left = clamp(rect.left, 0, 1);
+  const right = clamp(rect.right, 0, 1);
+  const bottom = clamp(rect.bottom, 0, 1);
+  const top = clamp(rect.top, 0, 1);
+
+  if (right <= left || top <= bottom) {
+    element.hidden = true;
+    return;
+  }
+
+  element.hidden = false;
+  element.style.left = `${left * 100}%`;
+  element.style.top = `${(1 - top) * 100}%`;
+  element.style.width = `${(right - left) * 100}%`;
+  element.style.height = `${(top - bottom) * 100}%`;
+}
+
+function openSoundmarkPanel(soundmark) {
+  const panel = $("#soundmark-panel");
+  if (!panel) return;
+
+  clearTimeout(soundmarkCloseTimer);
+  activeSoundmarkId = soundmark.id;
+  $("#app")?.classList.add("soundmark-panel-open");
+
+  $("#soundmark-title").textContent = soundmark.title;
+  $("#soundmark-body").textContent = soundmark.body;
+  $("#soundmark-caption").textContent = soundmark.caption;
+  renderSoundmarkTags(soundmark.tags);
+  renderSoundmarkSource(soundmark);
+  markActiveSoundmark();
+
+  panel.hidden = false;
+  panel.dataset.phase = getLyricGuidePhaseLabel(soundmarkLastProgress);
+  scheduleAnimationFrame(() => panel.classList.add("is-open"));
+}
+
+function closeSoundmarkPanel(options = {}) {
+  const { immediate = false } = options;
+  const panel = $("#soundmark-panel");
+  if (!panel) return;
+
+  clearTimeout(soundmarkCloseTimer);
+  activeSoundmarkId = null;
+  $("#app")?.classList.remove("soundmark-panel-open");
+  markActiveSoundmark();
+
+  panel.classList.remove("is-open");
+  if (immediate) {
+    panel.hidden = true;
+    return;
+  }
+
+  soundmarkCloseTimer = setTimeout(() => {
+    if (!activeSoundmarkId) panel.hidden = true;
+  }, 300);
+}
+
+function renderSoundmarkTags(tags) {
+  const container = $("#soundmark-tags");
+  if (!container) return;
+
+  container.replaceChildren();
+  for (const tag of tags ?? []) {
+    const element = document.createElement("span");
+    element.className = "soundmark-tag";
+    element.textContent = tag;
+    container.appendChild(element);
+  }
+}
+
+function renderSoundmarkSource(soundmark) {
+  const source = $("#soundmark-source");
+  if (!source) return;
+
+  if (!soundmark.sourceUrl) {
+    source.hidden = true;
+    source.removeAttribute("href");
+    source.textContent = "";
+    return;
+  }
+
+  source.hidden = false;
+  source.href = soundmark.sourceUrl;
+  source.textContent = `SOURCE / ${soundmark.sourceLabel}`;
+}
+
+function markActiveSoundmark() {
+  document.querySelectorAll(".soundmark-pin").forEach((marker) => {
+    marker.classList.toggle("active", marker.dataset.soundmarkId === activeSoundmarkId);
+  });
+}
+
+function applySoundmarkPalette(progress) {
+  const palette = getSoundmarkPalette(progress);
+  const targets = [$("#soundmark-layer"), $("#soundmark-panel"), $("#control-dock")].filter(Boolean);
+
+  for (const target of targets) {
+    target.style.setProperty("--soundmark-bg", formatRgba(palette.panelBg));
+    target.style.setProperty("--soundmark-bg-deep", formatRgba(palette.panelBgDeep));
+    target.style.setProperty("--soundmark-border", formatRgba(palette.border));
+    target.style.setProperty("--soundmark-ink", formatRgba(palette.ink));
+    target.style.setProperty("--soundmark-muted", formatRgba(palette.muted));
+    target.style.setProperty("--soundmark-accent", formatRgba(palette.accent));
+    target.style.setProperty("--soundmark-glow", formatRgba(palette.glow));
+    target.style.setProperty("--soundmark-caustic", formatRgba(palette.caustic));
+    target.style.setProperty("--soundmark-pin", formatRgba(palette.pin));
+    target.style.setProperty("--soundmark-ring", formatRgba(palette.ring));
+    target.style.setProperty("--soundmark-core", formatRgba(palette.core));
+  }
+
+  $("#soundmark-panel")?.setAttribute("data-phase", getLyricGuidePhaseLabel(progress));
+}
+
+function getSoundmarkPalette(progress) {
+  const clampedProgress = clamp(progress, 0, 1);
+  let palette = SOUNDMARK_PALETTES.day;
+  palette = mixGuidePalette(palette, SOUNDMARK_PALETTES.sunset, smoothstep(0.10, 0.42, clampedProgress));
+  palette = mixGuidePalette(palette, SOUNDMARK_PALETTES.twilight, smoothstep(0.44, 0.70, clampedProgress));
+  palette = mixGuidePalette(palette, SOUNDMARK_PALETTES.night, getNightPhase(clampedProgress));
+  return palette;
+}
+
 function applyLyricGuidePalette(guide, progress) {
   const palette = getLyricGuidePalette(progress);
   guide.style.setProperty("--guide-ink", formatRgba(palette.ink));
@@ -683,8 +1443,9 @@ function chooseLyricPlacementCandidate(candidates) {
       ? isInsideAvoidRect(screenPosition, previousLyricPosition)
       : false;
     const insideToriiRect = isInsideToriiExclusionRect(candidate);
+    const insideSoundmarkPanelRect = isInsideSoundmarkPanelExclusionRect(candidate);
     const score = getPlacementCandidateScore(candidate, screenPosition);
-    if (!insidePreviousRect && !insideToriiRect) {
+    if (!insidePreviousRect && !insideToriiRect && !insideSoundmarkPanelRect) {
       return candidate;
     }
     if (score > bestScore) {
@@ -698,7 +1459,9 @@ function chooseLyricPlacementCandidate(candidates) {
 
 function getPlacementCandidateScore(candidate, screenPosition) {
   const previousScore = previousLyricPosition ? getAvoidScore(screenPosition, previousLyricPosition) : 0;
-  return previousScore + getToriiExclusionScore(candidate) * 1.6;
+  return previousScore
+    + getToriiExclusionScore(candidate) * 1.6
+    + getSoundmarkPanelExclusionScore(candidate) * 1.7;
 }
 
 function isInsideAvoidRect(position, previousPosition) {
@@ -749,6 +1512,45 @@ function getToriiExclusionRect() {
     right: clamp(TORII_CENTER_X + halfWidth, 0, 1),
     bottom: clamp(bottom, 0, 1),
     top: clamp(top, 0, 1),
+  };
+}
+
+function isInsideSoundmarkPanelExclusionRect(position) {
+  if (!activeSoundmarkId) return false;
+
+  const rect = getSoundmarkPanelExclusionRect();
+  return rect.left <= position.x
+    && position.x <= rect.right
+    && rect.bottom <= position.y
+    && position.y <= rect.top;
+}
+
+function getSoundmarkPanelExclusionScore(position) {
+  if (!activeSoundmarkId) return 0;
+
+  const rect = getSoundmarkPanelExclusionRect();
+  const outsideDx = Math.max(rect.left - position.x, 0, position.x - rect.right);
+  const outsideDy = Math.max(rect.bottom - position.y, 0, position.y - rect.top);
+
+  if (outsideDx > 0 || outsideDy > 0) {
+    return 4 + outsideDx * outsideDx + outsideDy * outsideDy;
+  }
+
+  const halfWidth = Math.max((rect.right - rect.left) * 0.5, 0.001);
+  const halfHeight = Math.max((rect.top - rect.bottom) * 0.5, 0.001);
+  const centerX = (rect.left + rect.right) * 0.5;
+  const centerY = (rect.bottom + rect.top) * 0.5;
+  const dx = Math.abs(position.x - centerX) / halfWidth;
+  const dy = Math.abs(position.y - centerY) / halfHeight;
+  return dx * dx + dy * dy;
+}
+
+function getSoundmarkPanelExclusionRect() {
+  return {
+    left: SOUNDMARK_PANEL_EXCLUSION_LEFT,
+    right: SOUNDMARK_PANEL_EXCLUSION_RIGHT,
+    bottom: SOUNDMARK_PANEL_EXCLUSION_BOTTOM,
+    top: SOUNDMARK_PANEL_EXCLUSION_TOP,
   };
 }
 

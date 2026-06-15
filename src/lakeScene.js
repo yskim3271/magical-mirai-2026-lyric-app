@@ -1,21 +1,22 @@
 import * as THREE from "three";
 
 const MAX_RIPPLES = 24;
+const assetPath = (path) => `${import.meta.env.BASE_URL}${path}`;
 const BACKDROP_TEXTURES = [
-  ["uBackdrop", "/assets/timecycle-clean/lake-day-clean.png"],
-  ["uBackdropSunset", "/assets/timecycle-clean/lake-sunset-clean.png"],
-  ["uBackdropTwilight", "/assets/timecycle-clean/lake-twilight-clean.png"],
-  ["uBackdropNight", "/assets/timecycle-clean/lake-night-clean.png"],
+  ["uBackdrop", assetPath("assets/timecycle-clean/lake-day-clean.png")],
+  ["uBackdropSunset", assetPath("assets/timecycle-clean/lake-sunset-clean.png")],
+  ["uBackdropTwilight", assetPath("assets/timecycle-clean/lake-twilight-clean.png")],
+  ["uBackdropNight", assetPath("assets/timecycle-clean/lake-night-clean.png")],
 ];
 const CLOUD_TEXTURES = [
-  ["uCloudHigh", "/assets/clouds/cloud-high-mask.png"],
-  ["uCloudHorizon", "/assets/clouds/cloud-horizon-mask.png"],
+  ["uCloudHigh", assetPath("assets/clouds/cloud-high-mask.png")],
+  ["uCloudHorizon", assetPath("assets/clouds/cloud-horizon-mask.png")],
 ];
 const TORII_TEXTURES = [
-  ["uToriiDay", "/assets/landmarks/timecycle/torii-day.png"],
-  ["uToriiSunset", "/assets/landmarks/timecycle/torii-sunset.png"],
-  ["uToriiTwilight", "/assets/landmarks/timecycle/torii-twilight.png"],
-  ["uToriiNight", "/assets/landmarks/timecycle/torii-night.png"],
+  ["uToriiDay", assetPath("assets/landmarks/timecycle/torii-day.png")],
+  ["uToriiSunset", assetPath("assets/landmarks/timecycle/torii-sunset.png")],
+  ["uToriiTwilight", assetPath("assets/landmarks/timecycle/torii-twilight.png")],
+  ["uToriiNight", assetPath("assets/landmarks/timecycle/torii-night.png")],
 ];
 
 const vertexShader = `
@@ -589,7 +590,6 @@ const fragmentShader = `
     float beatWave = sin(lake.y * 6.4 - uTime * 2.2) * uBeatEnergy * mix(0.36, 0.92, nearCurve);
     vec2 toriiWaveReflection = toriiContinuousWaveReflection(uv, lake, horizon, aspect);
     wave += toriiWaveReflection.x * mix(0.006, 0.017, nearCurve);
-    float sunPath = exp(-abs(uv.x - 0.78) * 15.0) * smoothstep(horizon, 0.02, uv.y);
     float perspectiveLine = smoothstep(0.965, 1.0, sin(lake.y * 11.0 + waveNoise * 2.0) * 0.5 + 0.5);
     float sparkleSeed = noise(vec2(lake.x * 26.0 + uTime * 0.7, lake.y * 18.0));
     float sparkle = smoothstep(0.985, 1.0, sparkleSeed + wave * 0.8) * smoothstep(0.18, 0.9, farDepth);
@@ -636,7 +636,6 @@ const fragmentShader = `
     reflectedCloud *= smoothstep(0.18, 0.94, farDepth) * (1.0 - night * 0.24) * uCloudReady;
     water = mix(water, cloudColor, reflectedCloud * (0.06 + sunset * 0.035 + twilight * 0.020));
     water += vec3(0.64, 1.0, 0.98) * perspectiveLine * mix(0.010, 0.050, nearCurve);
-    water += vec3(1.0, 0.66, 0.20) * sunPath * (0.055 + sunset * 0.070 + sparkle * 0.18) * (1.0 - night * 0.86);
     water += vec3(0.48, 0.94, 1.0) * toriiWaveReflection.y * (0.030 + uBeatEnergy * 0.060);
     water += vec3(0.42, 0.95, 1.0) * abs(ripple) * (0.24 + uAmplitude * 0.72);
     water += vec3(1.0, 0.88, 0.35) * rippleGlow * (0.10 + uChorus * 0.24);

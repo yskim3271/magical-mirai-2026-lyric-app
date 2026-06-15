@@ -10,49 +10,97 @@
   <main id="app">
     <div id="lake-scene" aria-hidden="true"></div>
     <div id="lyric-effects" aria-hidden="true"></div>
+    <div id="soundmark-layer" class="soundmark-layer" aria-label="Sonare soundmarks"></div>
     <div id="lyric-guide" class="lyric-guide is-empty" data-phase="day" aria-live="polite" aria-atomic="true"></div>
+    <div id="soundmark-placement-overlay" aria-hidden="true" hidden></div>
     <div id="torii-exclusion-zone" aria-hidden="true" hidden></div>
     <div id="torii-reflection-overlay" aria-hidden="true" hidden></div>
 
-    <section class="control-dock" id="control-dock" aria-label="player and song controls">
+    <aside id="soundmark-panel" class="soundmark-panel" aria-live="polite" aria-atomic="true" hidden>
+      <button id="soundmark-close" class="soundmark-close" type="button" aria-label="Close soundmark">×</button>
+      <p class="soundmark-kicker">SONARE SOUNDMARK</p>
+      <h2 id="soundmark-title"></h2>
+      <p id="soundmark-body" class="soundmark-body"></p>
+      <div id="soundmark-tags" class="soundmark-tags" aria-label="related keywords"></div>
+      <p id="soundmark-caption" class="soundmark-caption"></p>
+      <a id="soundmark-source" class="soundmark-source" href="#" target="_blank" rel="noreferrer"></a>
+    </aside>
+
+    <section class="control-dock" id="control-dock" aria-label="music player controls">
       <button
         class="dock-toggle"
         id="btn-toggle-dock"
         type="button"
+        title="Hide controls"
+        aria-label="Hide controls"
         aria-expanded="true"
         aria-controls="dock-panel"
-      >Hide panel</button>
+      ></button>
 
       <div class="dock-panel" id="dock-panel">
-        <div class="dock-main">
-          <div class="track-meta">
-            <p class="eyebrow">Magical Mirai 2026 Programming Contest</p>
-            <h1 id="song-title">湖のソナーレ</h1>
-            <p id="song-artist">6-song lyric experience for Magical Mirai 2026</p>
+        <div class="progress" id="progress-track">
+          <div id="progress-bar"></div>
+          <input
+            id="progress-slider"
+            class="progress-slider"
+            type="range"
+            min="0"
+            max="1000"
+            step="1"
+            value="0"
+            aria-label="Playback position"
+            disabled
+          />
+        </div>
+
+        <div class="player-rail">
+          <div class="song-select">
+            <button
+              id="btn-song-menu"
+              class="track-selector"
+              type="button"
+              aria-haspopup="listbox"
+              aria-expanded="false"
+              aria-controls="song-list"
+            >
+              <span class="track-copy">
+                <span id="song-title" class="track-title">湖のソナーレ</span>
+                <span id="song-artist" class="track-artist">6-song lyric experience</span>
+              </span>
+              <span class="select-chevron" aria-hidden="true">⌄</span>
+            </button>
+
+            <div class="song-strip" id="song-list" role="listbox" aria-label="target songs" hidden></div>
           </div>
 
-          <div class="playback-controls">
-            <div class="transport" aria-label="player controls">
-              <button id="btn-play" type="button" disabled>Play</button>
-              <button id="btn-pause" type="button" disabled>Pause</button>
-              <button id="btn-stop" type="button" disabled>Stop</button>
-            </div>
+          <div class="transport" aria-label="player controls">
+            <button id="btn-prev-song" class="transport-button" type="button" aria-label="Previous song">
+              <span aria-hidden="true">⏮︎</span>
+            </button>
+            <button id="btn-play" class="transport-button primary" type="button" aria-label="Play" disabled>
+              <span id="play-icon" aria-hidden="true">▶</span>
+            </button>
+            <button id="btn-stop" class="transport-button" type="button" aria-label="Stop" disabled>
+              <span aria-hidden="true">■</span>
+            </button>
+            <button id="btn-next-song" class="transport-button" type="button" aria-label="Next song">
+              <span aria-hidden="true">⏭︎</span>
+            </button>
+          </div>
 
+          <div class="player-side">
+            <div class="time-row">
+              <span id="status" class="sr-only">Initializing TextAlive...</span>
+              <span class="time-display"><b id="now-position">0:00</b><span>/</span><b id="now-duration">-</b></span>
+            </div>
             <label class="volume-control" for="volume-slider">
-              <span>Volume</span>
+              <span class="volume-icon" aria-hidden="true">VOL</span>
               <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" />
               <output id="volume-label" for="volume-slider">100%</output>
             </label>
           </div>
         </div>
 
-        <div class="song-strip" id="song-list" aria-label="target songs"></div>
-
-        <div class="time-row">
-          <span id="status">Initializing TextAlive...</span>
-          <span><b id="now-position">0:00.000</b> / <b id="now-duration">-</b></span>
-        </div>
-        <div class="progress"><div id="progress-bar"></div></div>
         <p class="data-line">
           <span>Beat <b id="beat-label">-</b></span>
           <span>Chorus <b id="chorus-label">-</b></span>
@@ -61,6 +109,11 @@
       </div>
     </section>
   </main>
+
+  <aside class="orientation-lock" aria-label="landscape orientation required">
+    <strong>画面を横向きにしてください</strong>
+    <span>Please rotate your device to landscape.</span>
+  </aside>
 
   <div id="media"></div>
 

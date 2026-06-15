@@ -1,6 +1,7 @@
 node_modules/
 dist/
 .env
+.codex-logs/
 moodboard/
 concept/
 __pycache__/

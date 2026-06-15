@@ -1,4 +1,5 @@
 :root {
+  --stage-aspect: 1.7684210526;
   color-scheme: dark;
   font-family: "Segoe UI", "Hiragino Sans", "Yu Gothic", sans-serif;
   background: #06141c;
@@ -18,22 +19,38 @@ body {
   overflow: hidden;
 }
 
+body {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(33, 78, 92, 0.42), rgba(6, 20, 28, 0) 48%),
+    #06141c;
+}
+
 button {
   font: inherit;
 }
 
 #app {
   position: relative;
-  width: 100vw;
-  height: 100vh;
-  min-height: 560px;
+  width: min(100vw, calc(100vh * var(--stage-aspect)));
+  height: min(100vh, calc(100vw / var(--stage-aspect)));
   overflow: hidden;
   background: #06141c;
+  box-shadow: 0 0 80px rgba(0, 0, 0, 0.38);
+}
+
+@supports (height: 100dvh) {
+  #app {
+    width: min(100dvw, calc(100dvh * var(--stage-aspect)));
+    height: min(100dvh, calc(100dvw / var(--stage-aspect)));
+  }
 }
 
 #lake-scene,
 #lake-scene canvas,
-#lyric-effects {
+#lyric-effects,
+.soundmark-layer {
   position: absolute;
   inset: 0;
   width: 100%;
@@ -55,6 +72,296 @@ button {
   pointer-events: none;
 }
 
+.soundmark-layer {
+  --soundmark-pin: rgba(232, 255, 255, 0.94);
+  --soundmark-ring: rgba(104, 238, 236, 0.46);
+  --soundmark-core: rgba(255, 255, 255, 0.88);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.soundmark-pin {
+  position: absolute;
+  width: 48px;
+  height: 58px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--soundmark-pin);
+  cursor: pointer;
+  opacity: 0;
+  pointer-events: auto;
+  text-shadow:
+    0 1px 10px rgba(2, 18, 28, 0.58),
+    0 0 18px var(--soundmark-ring),
+    0 0 42px rgba(255, 255, 255, 0.24);
+  transform: translate(-50%, -50%) scale(0.72);
+  transition:
+    filter 180ms ease,
+    opacity 420ms ease,
+    transform 420ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.soundmark-pin.is-visible {
+  opacity: 0.94;
+  transform: translate(-50%, -50%) scale(1);
+}
+
+.soundmark-pin:hover,
+.soundmark-pin.active {
+  filter: brightness(1.18);
+  opacity: 1;
+  transform: translate(-50%, -54%) scale(1.08);
+}
+
+.soundmark-pin::before,
+.soundmark-pin::after {
+  position: absolute;
+  left: 50%;
+  bottom: 4px;
+  width: 34px;
+  height: 10px;
+  border: 1px solid var(--soundmark-ring);
+  border-radius: 50%;
+  content: "";
+  transform: translateX(-50%);
+  animation: soundmark-ring 2600ms ease-out infinite;
+}
+
+.soundmark-pin::after {
+  width: 22px;
+  height: 7px;
+  animation-delay: 760ms;
+  opacity: 0.68;
+}
+
+.soundmark-symbol {
+  position: absolute;
+  left: 50%;
+  bottom: 12px;
+  display: grid;
+  width: 28px;
+  height: 38px;
+  place-items: center;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", serif;
+  font-size: 24px;
+  line-height: 1;
+  transform: translateX(-50%);
+  animation: soundmark-float 3600ms ease-in-out infinite;
+}
+
+.soundmark-symbol::after {
+  position: absolute;
+  left: 50%;
+  bottom: -9px;
+  width: 2px;
+  height: 24px;
+  background: linear-gradient(180deg, var(--soundmark-core), rgba(255, 255, 255, 0));
+  content: "";
+  opacity: 0.64;
+  transform: translateX(-50%);
+}
+
+.soundmark-panel {
+  --soundmark-bg: rgba(214, 250, 255, 0.075);
+  --soundmark-bg-deep: rgba(16, 76, 96, 0.105);
+  --soundmark-border: rgba(236, 255, 255, 0.72);
+  --soundmark-ink: rgba(246, 255, 255, 0.96);
+  --soundmark-muted: rgba(221, 248, 250, 0.76);
+  --soundmark-accent: rgba(125, 241, 237, 0.82);
+  --soundmark-glow: rgba(92, 224, 229, 0.36);
+  --soundmark-caustic: rgba(255, 255, 255, 0.26);
+  position: absolute;
+  top: clamp(70px, 15vh, 150px);
+  right: clamp(20px, 4vw, 58px);
+  z-index: 5;
+  width: clamp(310px, 27vw, 430px);
+  max-height: min(62vh, 560px);
+  overflow: hidden;
+  isolation: isolate;
+  padding: clamp(24px, 3vw, 38px);
+  border: 1px solid var(--soundmark-border);
+  border-radius: 8px;
+  background:
+    linear-gradient(132deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0) 18%),
+    radial-gradient(circle at 86% 14%, color-mix(in srgb, var(--soundmark-caustic), transparent 34%), rgba(255, 255, 255, 0) 23%),
+    radial-gradient(ellipse at 46% 42%, rgba(255, 255, 255, 0.026), rgba(255, 255, 255, 0) 58%),
+    linear-gradient(150deg, var(--soundmark-bg), rgba(255, 255, 255, 0.012) 48%, var(--soundmark-bg-deep)),
+    rgba(255, 255, 255, 0.010);
+  background-clip: padding-box;
+  box-shadow:
+    0 26px 78px rgba(0, 14, 24, 0.28),
+    0 0 38px var(--soundmark-glow),
+    inset 0 1px 0 rgba(255, 255, 255, 0.56),
+    inset 1px 0 0 rgba(255, 255, 255, 0.18),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.13);
+  color: var(--soundmark-ink);
+  text-shadow: 0 1px 12px rgba(0, 16, 28, 0.34);
+  -webkit-backdrop-filter: blur(5px) saturate(1.28) contrast(1.03) brightness(1.03);
+  backdrop-filter: blur(5px) saturate(1.28) contrast(1.03) brightness(1.03);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate3d(18px, 10px, 0) scale(0.985);
+  transition:
+    background 900ms ease,
+    border-color 900ms ease,
+    box-shadow 900ms ease,
+    color 900ms ease,
+    opacity 260ms ease,
+    transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.soundmark-panel::before,
+.soundmark-panel::after {
+  position: absolute;
+  inset: -18%;
+  pointer-events: none;
+  content: "";
+}
+
+.soundmark-panel::before {
+  background:
+    linear-gradient(120deg, transparent 18%, var(--soundmark-caustic) 23%, transparent 30%),
+    linear-gradient(36deg, transparent 57%, var(--soundmark-caustic) 61%, transparent 67%),
+    radial-gradient(ellipse at 96% 52%, var(--soundmark-caustic), rgba(255, 255, 255, 0) 26%);
+  filter: blur(0.2px);
+  mix-blend-mode: screen;
+  opacity: 0.42;
+  transform: translate3d(7%, -7%, 0);
+}
+
+.soundmark-panel::after {
+  inset: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  border-radius: 7px;
+  box-shadow:
+    inset 0 0 42px rgba(255, 255, 255, 0.070),
+    inset 0 0 1px rgba(255, 255, 255, 0.58);
+  opacity: 0.92;
+}
+
+.soundmark-panel.is-open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.soundmark-panel[hidden] {
+  display: none;
+}
+
+.soundmark-panel > * {
+  position: relative;
+  z-index: 1;
+}
+
+.soundmark-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  z-index: 2;
+  display: grid;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--soundmark-ink);
+  cursor: pointer;
+  font-size: 30px;
+  font-weight: 200;
+  line-height: 1;
+  opacity: 0.82;
+  transition:
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.soundmark-close:hover {
+  opacity: 1;
+  transform: scale(1.06);
+}
+
+.soundmark-kicker {
+  margin: 0 42px 18px 0;
+  color: var(--soundmark-muted);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.16em;
+}
+
+.soundmark-panel h2 {
+  margin: 0 0 16px;
+  padding-bottom: 17px;
+  border-bottom: 1px solid color-mix(in srgb, var(--soundmark-border), transparent 46%);
+  color: var(--soundmark-ink);
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "YuMincho", "Noto Serif JP", serif;
+  font-size: clamp(26px, 2.8vw, 42px);
+  font-weight: 600;
+  line-height: 1.2;
+  letter-spacing: 0;
+  text-shadow:
+    0 1px 12px rgba(0, 18, 28, 0.24),
+    0 0 18px var(--soundmark-glow);
+}
+
+.soundmark-body {
+  margin: 0 0 18px;
+  color: var(--soundmark-ink);
+  font-size: clamp(13px, 1.15vw, 16px);
+  font-weight: 500;
+  line-height: 1.86;
+  text-shadow: 0 1px 10px rgba(0, 20, 30, 0.22);
+}
+
+.soundmark-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 0 0 22px;
+}
+
+.soundmark-tag {
+  display: inline-flex;
+  min-height: 28px;
+  align-items: center;
+  padding: 5px 11px;
+  border: 1px solid color-mix(in srgb, var(--soundmark-border), transparent 44%);
+  border-radius: 999px;
+  color: var(--soundmark-muted);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  background: color-mix(in srgb, var(--soundmark-bg), transparent 48%);
+}
+
+.soundmark-caption {
+  margin: 0 0 18px;
+  padding-top: 16px;
+  border-top: 1px solid color-mix(in srgb, var(--soundmark-border), transparent 58%);
+  color: var(--soundmark-muted);
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "YuMincho", "Noto Serif JP", serif;
+  font-size: clamp(13px, 1.05vw, 15px);
+  line-height: 1.8;
+}
+
+.soundmark-source {
+  display: inline-flex;
+  align-items: center;
+  color: var(--soundmark-accent);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  opacity: 0.78;
+}
+
+.soundmark-source:hover {
+  opacity: 1;
+  text-decoration: underline;
+}
+
 .lyric-guide {
   --guide-ink: rgba(250, 255, 255, 0.96);
   --guide-active: rgba(255, 255, 255, 1);
@@ -65,7 +372,7 @@ button {
   --guide-chorus-glow: rgba(255, 219, 116, 0.18);
   position: absolute;
   top: clamp(42px, 7vh, 92px);
-  right: clamp(18px, 4vw, 64px);
+  left: clamp(86px, 11vw, 190px);
   z-index: 3;
   max-width: min(28vw, 190px);
   max-height: min(44vh, 360px);
@@ -91,7 +398,7 @@ button {
 .lyric-guide.is-empty {
   opacity: 0;
   filter: blur(5px);
-  transform: translate3d(8px, -8px, 0);
+  transform: translate3d(-8px, -8px, 0);
 }
 
 .lyric-guide-lines {
@@ -174,6 +481,105 @@ button {
   box-shadow:
     0 0 22px rgba(255, 225, 96, 0.24),
     inset 0 0 22px rgba(255, 225, 96, 0.16);
+}
+
+#soundmark-placement-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+}
+
+.soundmark-placement-visible,
+.soundmark-placement-forbidden {
+  position: absolute;
+  pointer-events: none;
+}
+
+.soundmark-placement-visible {
+  border: 1px dashed rgba(118, 239, 231, 0.86);
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(
+      -38deg,
+      rgba(118, 239, 231, 0.11) 0,
+      rgba(118, 239, 231, 0.11) 9px,
+      rgba(255, 255, 255, 0.025) 9px,
+      rgba(255, 255, 255, 0.025) 18px
+    ),
+    rgba(56, 210, 206, 0.040);
+  box-shadow:
+    0 0 26px rgba(88, 225, 220, 0.18),
+    inset 0 0 28px rgba(88, 225, 220, 0.10);
+}
+
+.soundmark-placement-visible::before,
+.soundmark-placement-forbidden::before {
+  position: absolute;
+  top: 9px;
+  left: 10px;
+  padding: 5px 7px;
+  border: 1px solid rgba(219, 252, 255, 0.26);
+  border-radius: 5px;
+  background: rgba(4, 18, 28, 0.56);
+  color: rgba(238, 255, 255, 0.90);
+  content: "Soundmark visible area\A" attr(data-bounds);
+  font-size: 11px;
+  font-weight: 750;
+  line-height: 1.35;
+  text-shadow: 0 1px 6px rgba(0, 12, 20, 0.78);
+  white-space: pre;
+}
+
+.soundmark-placement-visible::before {
+  content: "Soundmark visible area\A" attr(data-bounds);
+}
+
+.soundmark-placement-forbidden {
+  border: 1px solid rgba(255, 218, 92, 0.88);
+  border-radius: 8px;
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 218, 92, 0.17) 0,
+      rgba(255, 218, 92, 0.17) 8px,
+      rgba(255, 95, 126, 0.080) 8px,
+      rgba(255, 95, 126, 0.080) 16px
+    ),
+    rgba(255, 166, 73, 0.045);
+  box-shadow:
+    0 0 22px rgba(255, 194, 71, 0.20),
+    inset 0 0 22px rgba(255, 194, 71, 0.12);
+}
+
+.soundmark-placement-forbidden::before {
+  background: rgba(50, 22, 10, 0.58);
+  color: rgba(255, 246, 209, 0.94);
+  content: attr(data-label);
+}
+
+.soundmark-placement-forbidden-panel {
+  border-color: rgba(255, 169, 236, 0.78);
+  background:
+    repeating-linear-gradient(
+      45deg,
+      rgba(255, 169, 236, 0.13) 0,
+      rgba(255, 169, 236, 0.13) 8px,
+      rgba(118, 239, 231, 0.050) 8px,
+      rgba(118, 239, 231, 0.050) 16px
+    ),
+    rgba(185, 118, 255, 0.035);
+  box-shadow:
+    0 0 22px rgba(255, 169, 236, 0.16),
+    inset 0 0 22px rgba(255, 169, 236, 0.10);
+}
+
+.soundmark-placement-forbidden-panel::before {
+  background: rgba(28, 12, 38, 0.58);
+}
+
+#soundmark-placement-overlay[hidden] {
+  display: none;
 }
 
 #torii-reflection-overlay {
@@ -267,64 +673,147 @@ button {
 
 .control-dock {
   position: absolute;
-  right: clamp(12px, 3vw, 32px);
-  bottom: clamp(12px, 3vw, 28px);
-  left: clamp(12px, 3vw, 32px);
+  left: 50%;
+  bottom: clamp(18px, 3vh, 34px);
   z-index: 4;
-  max-width: 1180px;
-  margin: 0 auto;
-  padding: 16px;
-  border: 1px solid rgba(226, 244, 248, 0.34);
+  width: min(72%, 1160px);
+  height: 110px;
+  min-width: 720px;
+  box-sizing: border-box;
+  padding: 37px 30px 17px;
+  border: 1px solid color-mix(in srgb, var(--soundmark-border, rgba(226, 244, 248, 0.34)), transparent 32%);
   border-radius: 8px;
   background:
-    linear-gradient(180deg, rgba(11, 42, 53, 0.68), rgba(5, 22, 32, 0.76)),
-    rgba(5, 22, 32, 0.72);
+    linear-gradient(135deg, rgba(255, 255, 255, 0.095), rgba(255, 255, 255, 0) 19%),
+    radial-gradient(circle at 52% 0%, color-mix(in srgb, var(--soundmark-caustic, rgba(255, 255, 255, 0.26)), transparent 42%), rgba(255, 255, 255, 0) 28%),
+    linear-gradient(170deg, var(--soundmark-bg, rgba(214, 250, 255, 0.075)), rgba(255, 255, 255, 0.010) 46%, var(--soundmark-bg-deep, rgba(16, 76, 96, 0.105))),
+    rgba(3, 16, 26, 0.10);
   box-shadow:
-    0 20px 60px rgba(1, 12, 20, 0.46),
-    inset 0 1px 0 rgba(255, 255, 255, 0.2);
-  backdrop-filter: blur(18px) saturate(1.24);
+    0 22px 68px rgba(0, 12, 22, 0.34),
+    0 0 20px color-mix(in srgb, var(--soundmark-glow, rgba(92, 224, 229, 0.36)), transparent 58%),
+    inset 0 1px 0 rgba(255, 255, 255, 0.48),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.10);
+  color: var(--soundmark-ink, #f8fafc);
+  -webkit-backdrop-filter: blur(5px) saturate(1.28) contrast(1.03) brightness(1.03);
+  backdrop-filter: blur(5px) saturate(1.28) contrast(1.03) brightness(1.03);
+  transform: translateX(-50%);
   transition:
     background 180ms ease,
     border-color 180ms ease,
     box-shadow 180ms ease,
-    padding 180ms ease;
+    opacity 180ms ease,
+    padding 180ms ease,
+    transform 180ms ease;
+}
+
+.control-dock::before,
+.control-dock::after {
+  position: absolute;
+  pointer-events: none;
+  content: "";
+}
+
+.control-dock::before {
+  inset: -18%;
+  background:
+    linear-gradient(118deg, transparent 22%, color-mix(in srgb, var(--soundmark-caustic, rgba(255, 255, 255, 0.26)), transparent 12%) 28%, transparent 35%),
+    linear-gradient(32deg, transparent 62%, color-mix(in srgb, var(--soundmark-caustic, rgba(255, 255, 255, 0.26)), transparent 24%) 66%, transparent 72%);
+  mix-blend-mode: screen;
+  opacity: 0.16;
+  transform: translate3d(5%, -6%, 0);
+}
+
+.control-dock::after {
+  inset: 1px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  border-radius: 7px;
+  box-shadow:
+    inset 0 0 34px rgba(255, 255, 255, 0.054),
+    inset 0 0 1px rgba(255, 255, 255, 0.48);
+}
+
+.control-dock > * {
+  position: relative;
+  z-index: 1;
 }
 
 .dock-toggle {
   position: absolute;
-  right: 0;
-  top: -46px;
-  min-height: 34px;
-  padding: 8px 12px;
-  border: 1px solid rgba(202, 231, 234, 0.38);
-  border-radius: 8px;
-  background: rgba(5, 22, 32, 0.58);
-  color: #f8fafc;
+  top: 50%;
+  right: -46px;
+  z-index: 3;
+  display: grid;
+  width: 38px;
+  height: 76px;
+  padding: 0;
+  place-items: center;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: transparent;
   cursor: pointer;
-  box-shadow: 0 14px 36px rgba(1, 12, 20, 0.32);
-  backdrop-filter: blur(14px) saturate(1.18);
+  font-size: 0;
+  line-height: 1;
+  box-shadow: none;
+  opacity: 0.34;
+  transform: translateY(-50%);
+  transition:
+    opacity 160ms ease,
+    filter 160ms ease,
+    transform 160ms ease;
+}
+
+.dock-toggle::before,
+.dock-toggle::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 24px;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--soundmark-ink, rgba(248, 250, 252, 0.96)), transparent 24%);
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--soundmark-glow, rgba(87, 215, 207, 0.62)), transparent 46%),
+    0 1px 8px rgba(0, 18, 28, 0.42);
+  content: "";
+  transform-origin: center;
+}
+
+.dock-toggle::before {
+  transform: translate(-50%, -8px) rotate(48deg);
+}
+
+.dock-toggle::after {
+  transform: translate(-50%, 8px) rotate(-48deg);
 }
 
 .dock-toggle:hover {
-  border-color: rgba(255, 222, 91, 0.78);
-  background: rgba(5, 22, 32, 0.78);
+  filter: brightness(1.16);
+  opacity: 0.76;
+  transform: translate(3px, -50%);
 }
 
 .dock-panel {
+  min-height: 54px;
   transition:
     opacity 140ms ease,
     transform 180ms ease;
 }
 
 .control-dock.collapsed {
+  right: clamp(18px, 3vw, 34px);
   left: auto;
+  bottom: clamp(18px, 3vh, 34px);
   width: auto;
+  height: 76px;
+  min-width: 0;
   max-width: none;
   padding: 0;
   border-color: transparent;
   background: transparent;
   box-shadow: none;
   backdrop-filter: none;
+  transform: none;
 }
 
 .control-dock.collapsed .dock-panel {
@@ -333,204 +822,471 @@ button {
 
 .control-dock.collapsed .dock-toggle {
   position: static;
-  min-height: 42px;
-  padding: 10px 14px;
-  background: rgba(5, 22, 32, 0.66);
+  width: 42px;
+  height: 76px;
+  opacity: 0.38;
+  transform: none;
 }
 
-.dock-main {
+.control-dock.collapsed .dock-toggle::before {
+  transform: translate(-50%, -8px) rotate(-48deg);
+}
+
+.control-dock.collapsed .dock-toggle::after {
+  transform: translate(-50%, 8px) rotate(48deg);
+}
+
+.control-dock.collapsed .dock-toggle:hover {
+  opacity: 0.78;
+  transform: translateX(-3px);
+}
+
+.player-rail {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  min-height: 54px;
   align-items: center;
-  gap: 16px;
-  margin-bottom: 12px;
+  grid-template-columns: minmax(210px, 1fr) auto minmax(210px, 1fr);
+  gap: clamp(14px, 2vw, 32px);
 }
 
-.track-meta {
+.song-select {
+  position: relative;
   min-width: 0;
+  justify-self: start;
 }
 
-.eyebrow {
-  margin: 0 0 3px;
-  color: #9debe5;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0;
-  text-transform: uppercase;
-}
-
-h1,
-p {
-  margin-top: 0;
-}
-
-h1 {
-  margin-bottom: 3px;
-  overflow: hidden;
-  color: #ffffff;
-  font-size: clamp(20px, 3vw, 32px);
-  line-height: 1.1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-#song-artist {
-  margin: 0;
-  overflow: hidden;
-  color: #cae7ea;
-  font-size: 13px;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.transport {
-  display: flex;
-  gap: 8px;
-}
-
-.playback-controls {
+.track-selector {
   display: grid;
-  justify-items: end;
-  gap: 8px;
-}
-
-.transport button,
-.song-card {
-  border: 1px solid rgba(202, 231, 234, 0.34);
+  width: min(286px, 25vw);
+  min-height: 38px;
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 7px 12px 7px 17px;
+  border: 1px solid color-mix(in srgb, var(--soundmark-border, rgba(202, 231, 234, 0.34)), transparent 42%);
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: #f8fafc;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.070), rgba(255, 255, 255, 0.010)),
+    rgba(255, 255, 255, 0.035);
+  color: var(--soundmark-ink, #f8fafc);
   cursor: pointer;
+  text-align: left;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.20),
+    0 12px 30px rgba(0, 12, 20, 0.12);
   transition:
     border-color 160ms ease,
     background 160ms ease,
     transform 160ms ease;
 }
 
-.transport button {
-  min-width: 68px;
-  min-height: 40px;
-  padding: 9px 13px;
+.track-selector:hover,
+.track-selector.is-open {
+  border-color: color-mix(in srgb, var(--soundmark-accent, #57d7cf), transparent 16%);
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.020)),
+    rgba(255, 255, 255, 0.050);
 }
 
-.transport button:hover:not(:disabled),
-.song-card:hover {
-  border-color: rgba(255, 222, 91, 0.78);
-  background: rgba(255, 255, 255, 0.14);
-  transform: translateY(-1px);
-}
-
-.transport button:disabled {
-  color: rgba(202, 231, 234, 0.46);
-  cursor: default;
-}
-
-.volume-control {
+.track-copy {
   display: grid;
-  grid-template-columns: auto minmax(112px, 164px) 42px;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  color: #cae7ea;
-  font-size: 12px;
-}
-
-.volume-control input {
-  width: 100%;
   min-width: 0;
-  accent-color: #57d7cf;
+  gap: 1px;
 }
 
-.volume-control output {
-  color: #ffffff;
-  font-variant-numeric: tabular-nums;
-  text-align: right;
+.track-title,
+.track-artist {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.track-title {
+  color: var(--soundmark-ink, #ffffff);
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "YuMincho", "Noto Serif JP", serif;
+  font-size: 14px;
+  font-weight: 700;
+  line-height: 1.12;
+}
+
+.track-artist {
+  color: var(--soundmark-muted, #cae7ea);
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 1.2;
+  opacity: 0.76;
+}
+
+.select-chevron {
+  position: relative;
+  display: grid;
+  width: 24px;
+  height: 24px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--soundmark-border, rgba(202, 231, 234, 0.34)), transparent 54%);
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.040);
+  color: transparent;
+  font-size: 0;
+  line-height: 1;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    transform 160ms ease;
+}
+
+.select-chevron::before,
+.select-chevron::after {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 8px;
+  height: 1.7px;
+  border-radius: 999px;
+  background: var(--soundmark-accent, #9debe5);
+  content: "";
+  opacity: 0.92;
+  transform-origin: center;
+}
+
+.select-chevron::before {
+  transform: translate(-6px, -1px) rotate(42deg);
+}
+
+.select-chevron::after {
+  transform: translate(-1px, -1px) rotate(-42deg);
+}
+
+.track-selector.is-open .select-chevron {
+  border-color: color-mix(in srgb, var(--soundmark-accent, #57d7cf), transparent 34%);
+  background: rgba(255, 255, 255, 0.075);
+  transform: rotate(180deg);
 }
 
 .song-strip {
+  position: absolute;
+  left: 0;
+  bottom: calc(100% + 16px);
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
-  gap: 8px;
-  margin-bottom: 12px;
+  width: min(520px, 48vw);
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 7px;
+  padding: 9px;
+  border: 1px solid color-mix(in srgb, var(--soundmark-border, rgba(226, 244, 248, 0.34)), transparent 32%);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.10), rgba(255, 255, 255, 0.016)),
+    linear-gradient(170deg, var(--soundmark-bg, rgba(214, 250, 255, 0.075)), var(--soundmark-bg-deep, rgba(16, 76, 96, 0.105))),
+    rgba(3, 16, 26, 0.20);
+  box-shadow:
+    0 20px 54px rgba(0, 12, 22, 0.34),
+    inset 0 1px 0 rgba(255, 255, 255, 0.28);
+  -webkit-backdrop-filter: blur(5px) saturate(1.26);
+  backdrop-filter: blur(5px) saturate(1.26);
+}
+
+.song-strip[hidden] {
+  display: none;
 }
 
 .song-card {
   display: grid;
   min-width: 0;
-  min-height: 58px;
-  padding: 8px 10px;
+  min-height: 52px;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--soundmark-border, rgba(202, 231, 234, 0.34)), transparent 48%);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.046);
+  color: var(--soundmark-ink, #f8fafc);
+  cursor: pointer;
   text-align: left;
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    transform 160ms ease;
+}
+
+.song-card:hover {
+  border-color: color-mix(in srgb, var(--soundmark-accent, #ffe06f), transparent 16%);
+  background: rgba(255, 255, 255, 0.095);
+  transform: translateY(-1px);
 }
 
 .song-card span,
-.song-card em {
+.song-card em,
+.song-card strong {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .song-card span {
-  color: #ffe06f;
+  color: var(--soundmark-accent, #ffe06f);
   font-size: 10px;
   font-weight: 800;
 }
 
 .song-card strong {
-  overflow: hidden;
   align-self: end;
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "YuMincho", "Noto Serif JP", serif;
   font-size: 13px;
   line-height: 1.15;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .song-card em {
-  color: #cae7ea;
+  color: var(--soundmark-muted, #cae7ea);
   font-size: 11px;
   font-style: normal;
 }
 
 .song-card.active {
-  border-color: #57d7cf;
-  background: rgba(69, 214, 204, 0.22);
-  box-shadow: inset 0 0 0 1px rgba(87, 215, 207, 0.28);
+  border-color: color-mix(in srgb, var(--soundmark-accent, #57d7cf), transparent 10%);
+  background: color-mix(in srgb, var(--soundmark-bg, rgba(69, 214, 204, 0.22)), transparent 18%);
+  box-shadow:
+    inset 0 0 0 1px color-mix(in srgb, var(--soundmark-accent, #57d7cf), transparent 60%),
+    0 0 18px color-mix(in srgb, var(--soundmark-glow, rgba(87, 215, 207, 0.34)), transparent 12%);
 }
 
-.time-row,
-.data-line {
+.transport {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  color: #cae7ea;
-  font-size: 12px;
+  justify-content: center;
+  gap: 11px;
 }
 
-.time-row b,
-.data-line b {
-  color: #ffffff;
+.transport-button {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--soundmark-ink, #f8fafc);
+  cursor: pointer;
+  font-family: "Segoe UI Symbol", "Yu Gothic", sans-serif;
+  font-size: 18px;
+  line-height: 1;
+  text-shadow:
+    0 0 8px color-mix(in srgb, var(--soundmark-glow, rgba(87, 215, 207, 0.62)), transparent 46%),
+    0 1px 8px rgba(0, 18, 28, 0.46);
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.transport-button.primary {
+  width: 45px;
+  height: 45px;
+  font-size: 28px;
+}
+
+.transport-button:hover:not(:disabled) {
+  border-color: color-mix(in srgb, var(--soundmark-border, rgba(202, 231, 234, 0.34)), transparent 46%);
+  background: rgba(255, 255, 255, 0.060);
+  transform: translateY(-1px);
+}
+
+.transport-button:disabled {
+  color: color-mix(in srgb, var(--soundmark-muted, rgba(202, 231, 234, 0.46)), transparent 42%);
+  cursor: default;
+  opacity: 0.44;
+}
+
+.player-side {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: end;
+  gap: 22px;
+}
+
+.time-row {
+  display: flex;
+  min-width: 96px;
+  align-items: center;
+  justify-content: end;
+  color: var(--soundmark-muted, #cae7ea);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.time-display {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font-variant-numeric: tabular-nums;
-}
-
-#status {
-  overflow: hidden;
-  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.progress {
-  height: 6px;
-  margin: 9px 0 10px;
-  overflow: hidden;
+.time-row b {
+  color: var(--soundmark-ink, #ffffff);
+  font-weight: 700;
+}
+
+.volume-control {
+  display: grid;
+  width: min(164px, 15vw);
+  align-items: center;
+  grid-template-columns: auto minmax(62px, 1fr) 38px;
+  gap: 8px;
+  color: var(--soundmark-muted, #cae7ea);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.volume-icon {
+  color: var(--soundmark-ink, #ffffff);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  opacity: 0.82;
+}
+
+.volume-control input,
+.progress-slider {
+  min-width: 0;
+  accent-color: var(--soundmark-accent, #57d7cf);
+}
+
+.volume-control input {
+  height: 16px;
+  width: 100%;
+  margin: 0;
+  border: 0;
+  appearance: none;
+  -webkit-appearance: none;
+  background: transparent;
+  outline: none;
+}
+
+.volume-control input::-webkit-slider-runnable-track {
+  height: 2px;
   border-radius: 999px;
-  background: rgba(202, 231, 234, 0.2);
+  background: color-mix(in srgb, var(--soundmark-border, rgba(202, 231, 234, 0.38)), transparent 44%);
+  box-shadow: 0 0 10px rgba(255, 255, 255, 0.08);
+}
+
+.volume-control input::-webkit-slider-thumb {
+  width: 9px;
+  height: 9px;
+  margin-top: -3.5px;
+  border: 0;
+  border-radius: 50%;
+  appearance: none;
+  -webkit-appearance: none;
+  background: var(--soundmark-ink, #ffffff);
+  box-shadow:
+    0 0 10px var(--soundmark-accent, #57d7cf),
+    0 0 12px color-mix(in srgb, var(--soundmark-glow, rgba(87, 215, 207, 0.62)), transparent 48%);
+}
+
+.volume-control input:focus-visible::-webkit-slider-runnable-track {
+  background: color-mix(in srgb, var(--soundmark-accent, #57d7cf), transparent 18%);
+}
+
+.volume-control input::-moz-range-track {
+  height: 2px;
+  border: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--soundmark-border, rgba(202, 231, 234, 0.38)), transparent 44%);
+}
+
+.volume-control input::-moz-range-thumb {
+  width: 9px;
+  height: 9px;
+  border: 0;
+  border-radius: 50%;
+  background: var(--soundmark-ink, #ffffff);
+  box-shadow:
+    0 0 10px var(--soundmark-accent, #57d7cf),
+    0 0 12px color-mix(in srgb, var(--soundmark-glow, rgba(87, 215, 207, 0.62)), transparent 48%);
+}
+
+.volume-control output {
+  color: var(--soundmark-ink, #ffffff);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.progress {
+  position: absolute;
+  top: -25px;
+  right: 0;
+  left: 0;
+  z-index: 2;
+  height: 18px;
+  overflow: visible;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.progress::before {
+  position: absolute;
+  top: 8px;
+  right: 0;
+  left: 0;
+  height: 2px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--soundmark-border, rgba(202, 231, 234, 0.26)), transparent 58%);
+  box-shadow: 0 0 12px rgba(255, 255, 255, 0.10);
+  content: "";
 }
 
 #progress-bar {
+  position: absolute;
+  top: 8px;
+  left: 0;
   width: 0;
-  height: 100%;
-  background: linear-gradient(90deg, #57d7cf, #aee7ff 56%, #ffe06f);
-  box-shadow: 0 0 24px rgba(87, 215, 207, 0.62);
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, var(--soundmark-accent, #57d7cf), rgba(226, 247, 255, 0.96) 60%, rgba(255, 244, 184, 0.96));
+  box-shadow:
+    0 0 9px color-mix(in srgb, var(--soundmark-glow, rgba(87, 215, 207, 0.62)), transparent 44%),
+    0 0 16px color-mix(in srgb, var(--soundmark-accent, #57d7cf), transparent 54%);
+}
+
+#progress-bar::after {
+  position: absolute;
+  top: 50%;
+  right: 0;
+  width: 11px;
+  height: 11px;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.96);
+  box-shadow:
+    0 0 10px color-mix(in srgb, var(--soundmark-accent, #57d7cf), transparent 24%),
+    0 0 16px color-mix(in srgb, var(--soundmark-glow, rgba(87, 215, 207, 0.62)), transparent 52%);
+  content: "";
+  transform: translate(50%, -50%);
+}
+
+.progress-slider {
+  position: absolute;
+  inset: -8px 0;
+  width: 100%;
+  cursor: pointer;
+  opacity: 0;
+}
+
+.progress-slider:disabled {
+  cursor: default;
+}
+
+.data-line {
+  display: none;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
 }
 
 .lyric-drop {
@@ -561,6 +1317,95 @@ h1 {
     0 0 56px rgba(87, 215, 207, 0.52);
 }
 
+.soundmark-debug-tools {
+  position: absolute;
+  left: clamp(14px, 2vw, 26px);
+  bottom: clamp(14px, 2vw, 26px);
+  z-index: 7;
+  display: flex;
+  max-width: min(62vw, 720px);
+  align-items: center;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(220, 248, 255, 0.36);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.09), rgba(11, 36, 51, 0.28)),
+    rgba(5, 21, 30, 0.32);
+  box-shadow:
+    0 18px 48px rgba(0, 12, 20, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.24);
+  backdrop-filter: blur(18px) saturate(1.35);
+}
+
+.debug-soundmarks .soundmark-debug-tools {
+  bottom: calc(clamp(18px, 3vh, 34px) + 108px);
+}
+
+.soundmark-debug-label {
+  padding: 0 5px 0 2px;
+  color: rgba(226, 249, 252, 0.76);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  white-space: nowrap;
+  text-transform: uppercase;
+}
+
+.soundmark-debug-tools button {
+  min-height: 32px;
+  padding: 7px 10px;
+  border: 1px solid rgba(220, 248, 255, 0.34);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.075);
+  color: #efffff;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  white-space: nowrap;
+  transition:
+    background 160ms ease,
+    border-color 160ms ease,
+    color 160ms ease,
+    transform 160ms ease;
+}
+
+.soundmark-debug-tools button:hover,
+.soundmark-debug-tools button.active {
+  border-color: rgba(255, 229, 145, 0.82);
+  background: rgba(255, 255, 255, 0.16);
+  color: #fff7ce;
+  transform: translateY(-1px);
+}
+
+@keyframes soundmark-ring {
+  0% {
+    opacity: 0.82;
+    transform: translateX(-50%) scale(0.58);
+  }
+
+  72% {
+    opacity: 0.06;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translateX(-50%) scale(1.86);
+  }
+}
+
+@keyframes soundmark-float {
+  0%,
+  100% {
+    transform: translate(-50%, 0);
+  }
+
+  48% {
+    transform: translate(-50%, -7px);
+  }
+}
+
 #media {
   position: fixed;
   top: 12px;
@@ -568,16 +1413,91 @@ h1 {
   z-index: 20;
 }
 
-@media (max-width: 920px) {
-  #app {
-    min-height: 620px;
-  }
+.orientation-lock {
+  position: fixed;
+  inset: 0;
+  z-index: 18;
+  display: none;
+  place-items: center;
+  padding: 28px;
+  background:
+    radial-gradient(circle at 50% 44%, rgba(44, 104, 118, 0.68), rgba(3, 13, 21, 0.90) 62%),
+    rgba(3, 13, 21, 0.96);
+  color: #f8fafc;
+  text-align: center;
+}
 
+.orientation-lock strong,
+.orientation-lock span {
+  display: block;
+}
+
+.orientation-lock strong {
+  margin-bottom: 10px;
+  font-size: clamp(22px, 7vw, 34px);
+  font-weight: 800;
+  letter-spacing: 0;
+}
+
+.orientation-lock span {
+  color: #c8eef2;
+  font-size: clamp(13px, 3.8vw, 17px);
+}
+
+@media (max-width: 920px) {
   .lyric-guide {
     top: clamp(36px, 6vh, 72px);
-    right: clamp(14px, 3vw, 28px);
-    max-width: 34vw;
+    left: clamp(42px, 8vw, 90px);
+    max-width: 30vw;
     max-height: 38vh;
+  }
+
+  .soundmark-panel {
+    top: clamp(44px, 11vh, 78px);
+    right: clamp(14px, 3vw, 28px);
+    width: clamp(260px, 34vw, 320px);
+    max-height: 60vh;
+    padding: 20px;
+  }
+
+  .soundmark-close {
+    top: 10px;
+    right: 10px;
+    width: 32px;
+    height: 32px;
+  }
+
+  .soundmark-kicker {
+    margin-bottom: 12px;
+    font-size: 10px;
+  }
+
+  .soundmark-panel h2 {
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    font-size: clamp(22px, 3vw, 28px);
+  }
+
+  .soundmark-body,
+  .soundmark-caption {
+    font-size: 12px;
+    line-height: 1.62;
+  }
+
+  .soundmark-debug-tools {
+    max-width: calc(100% - 28px);
+    gap: 5px;
+    padding: 6px;
+  }
+
+  .soundmark-debug-label {
+    display: none;
+  }
+
+  .soundmark-debug-tools button {
+    min-height: 30px;
+    padding: 6px 8px;
+    font-size: 11px;
   }
 
   .guide-line {
@@ -586,49 +1506,72 @@ h1 {
   }
 
   .control-dock {
-    padding: 13px;
+    width: min(88%, calc(100% - 28px));
+    min-width: 0;
+    padding: 37px 20px 17px;
   }
 
-  .dock-main {
-    grid-template-columns: 1fr;
+  .dock-toggle {
+    right: -30px;
+  }
+
+  .player-rail {
+    grid-template-columns: minmax(168px, 1fr) auto minmax(160px, 1fr);
     gap: 10px;
   }
 
-  .playback-controls {
-    justify-items: stretch;
+  .track-selector {
+    width: min(232px, 31vw);
+    padding-left: 13px;
   }
 
-  .transport button {
-    flex: 1;
+  .transport {
+    gap: 6px;
+  }
+
+  .transport-button {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .transport-button.primary {
+    width: 40px;
+    height: 40px;
+    font-size: 25px;
+  }
+
+  .player-side {
+    gap: 10px;
   }
 
   .volume-control {
-    grid-template-columns: auto minmax(0, 1fr) 42px;
+    width: min(128px, 17vw);
+    grid-template-columns: auto minmax(44px, 1fr) 34px;
   }
 
   .song-strip {
+    width: min(420px, 60vw);
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .song-card {
     min-height: 52px;
   }
-
-  .data-line {
-    flex-wrap: wrap;
-  }
 }
 
 @media (max-width: 520px) {
-  #app {
-    min-height: 680px;
-  }
-
   .lyric-guide {
     top: 24px;
-    right: 12px;
-    max-width: 42vw;
+    left: 24px;
+    max-width: 36vw;
     max-height: 32vh;
+  }
+
+  .soundmark-panel {
+    right: 12px;
+    width: min(46vw, 260px);
+    padding: 16px;
   }
 
   .lyric-guide-lines {
@@ -644,14 +1587,80 @@ h1 {
     margin-top: 24px;
   }
 
+  .control-dock {
+    width: calc(100% - 24px);
+    padding: 37px 14px 17px;
+  }
+
+  .dock-toggle {
+    right: -24px;
+  }
+
+  .player-rail {
+    grid-template-columns: minmax(116px, 1fr) auto minmax(104px, 1fr);
+    gap: 7px;
+  }
+
+  .track-selector {
+    width: min(178px, 32vw);
+    min-height: 34px;
+    padding: 6px 9px 6px 11px;
+  }
+
+  .track-artist,
+  .volume-control output {
+    display: none;
+  }
+
+  .track-title {
+    font-size: 12px;
+  }
+
+  .transport {
+    gap: 3px;
+  }
+
+  .transport-button {
+    width: 29px;
+    height: 29px;
+    font-size: 14px;
+  }
+
+  .transport-button.primary {
+    width: 36px;
+    height: 36px;
+    font-size: 22px;
+  }
+
+  .player-side {
+    gap: 6px;
+  }
+
   .time-row {
-    align-items: flex-start;
-    flex-direction: column;
-    gap: 4px;
+    min-width: 72px;
+    font-size: 11px;
+  }
+
+  .volume-control {
+    width: min(72px, 15vw);
+    grid-template-columns: auto minmax(34px, 1fr);
   }
 
   .song-strip {
-    max-height: 124px;
+    width: min(330px, 82vw);
+    max-height: 132px;
     overflow: auto;
+  }
+}
+
+@media (orientation: portrait) and (max-width: 920px) {
+  #app {
+    filter: blur(8px) brightness(0.42);
+    pointer-events: none;
+    user-select: none;
+  }
+
+  .orientation-lock {
+    display: grid;
   }
 }
