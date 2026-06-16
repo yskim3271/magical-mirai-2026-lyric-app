@@ -7,6 +7,7 @@ import { createTextAlivePlayer, loadSong } from "./textalive.js";
 const $ = (selector) => document.querySelector(selector);
 const DOCK_COLLAPSED_KEY = "sonareLakeDockCollapsed";
 const VOLUME_KEY = "sonareLakeVolume";
+const SOUNDMARK_COLLECTION_KEY = "sonareLakeSoundmarks";
 const LYRIC_SPAWN_LEAD_MS = 80;
 const LYRIC_BASE_DROP_MS = 2200;
 const LYRIC_FADE_OUT_MS = 520;
@@ -43,8 +44,15 @@ const SOUNDMARK_PLACEMENT_FALLBACK_BOTTOM = 0.22;
 const SOUNDMARK_PLACEMENT_DOCK_MARGIN_PX = 24;
 const SOUNDMARK_PIN_HALF_WIDTH_PX = 30;
 const SOUNDMARK_PIN_HALF_HEIGHT_PX = 38;
-const SOUNDMARK_PLACEMENT_CANDIDATE_COUNT = 24;
-const SOUNDMARK_REWIND_RESET_DELTA = 0.08;
+const SOUNDMARK_EXISTING_AVOID_MARGIN_PX = 14;
+const SOUNDMARK_EXISTING_AVOID_MIN_MARGIN_PX = 0;
+const SOUNDMARK_EXISTING_AVOID_MOBILE_HEIGHT_PX = 430;
+const SOUNDMARK_PLACEMENT_CANDIDATE_COUNT = 64;
+const SOUNDMARK_CORE_PER_SONG = 4;
+const SOUNDMARK_MOBILE_EXTRA_COUNT = 1;
+const SOUNDMARK_TABLET_EXTRA_COUNT = 2;
+const SOUNDMARK_DESKTOP_EXTRA_COUNT = 4;
+const SOUNDMARK_SLOT_SYMBOLS = ["♪", "♫", "♩", "♬", "♭", "♯", "♮", "𝄞"];
 const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug");
 const DEBUG_TORII_EXCLUSION_ZONE = DEBUG_MODE === "torii-zone";
 const DEBUG_TORII_REFLECTION = DEBUG_MODE === "torii-reflection";
@@ -169,6 +177,8 @@ let previousLyricPosition = null;
 let activeGuidePhraseKey = null;
 const spawnedSoundmarkIds = new Set();
 const soundmarkPositions = new Map();
+const soundmarkSlotAssignments = new Map();
+const discoveredSoundmarkIds = new Set(readDiscoveredSoundmarkIds());
 let activeSoundmarkId = null;
 let soundmarkLastProgress = 0;
 let soundmarkCloseTimer = null;
@@ -291,7 +301,6 @@ function renderSongList() {
     button.setAttribute("role", "option");
     button.setAttribute("aria-selected", "false");
     button.innerHTML = `
-      <span>${song.award}</span>
       <strong>${song.title}</strong>
       <em>${song.artist}</em>
     `;
@@ -547,11 +556,20 @@ function toggleDock() {
 }
 
 function setDockCollapsed(collapsed) {
-  $("#control-dock").classList.toggle("collapsed", collapsed);
-  $("#app").classList.toggle("dock-collapsed", collapsed);
-  $("#btn-toggle-dock").title = collapsed ? "Show controls" : "Hide controls";
-  $("#btn-toggle-dock").setAttribute("aria-label", collapsed ? "Show controls" : "Hide controls");
-  $("#btn-toggle-dock").setAttribute("aria-expanded", String(!collapsed));
+  const dock = $("#control-dock");
+  const app = $("#app");
+  const button = $("#btn-toggle-dock");
+  const panel = $("#dock-panel");
+
+  dock.classList.toggle("collapsed", collapsed);
+  app.classList.toggle("dock-collapsed", collapsed);
+  button.title = collapsed ? "Show controls" : "Hide controls";
+  button.setAttribute("aria-label", collapsed ? "Show controls" : "Hide controls");
+  button.setAttribute("aria-expanded", String(!collapsed));
+  if (panel) {
+    panel.inert = collapsed;
+    panel.setAttribute("aria-hidden", String(collapsed));
+  }
   if (collapsed) setSongMenuOpen(false);
   scheduleAnimationFrame(updateSoundmarkPlacementOverlay);
   setTimeout(updateSoundmarkPlacementOverlay, 220);
@@ -579,7 +597,6 @@ function selectSong(songId) {
   if (DEBUG_SOUNDMARKS) {
     $("#status").textContent = "Soundmark debug mode. Playback is not required.";
     setDebugSoundmarkProgress(debugSoundmarkProgress);
-    showDebugSoundmarks();
     return;
   }
 
@@ -866,8 +883,7 @@ function initializeSoundmarkDebugMode() {
   markActiveSong();
   renderSoundmarkDebugTools();
   setDebugSoundmarkProgress(DEBUG_SOUNDMARK_DEFAULT_PROGRESS);
-  showDebugSoundmarks();
-  openSoundmarkPanel(SOUNDMARKS[0]);
+  openSoundmarkPanel(getVisibleSoundmarks(debugSoundmarkProgress)[0] ?? SOUNDMARKS[0]);
   $("#status").textContent = "Soundmark debug mode. Playback is not required.";
 }
 
@@ -917,6 +933,7 @@ function setDebugSoundmarkProgress(progress) {
   applySoundmarkPalette(debugSoundmarkProgress);
   renderDebugLyricGuide(debugSoundmarkProgress);
   updateSoundmarkDebugTools();
+  showDebugSoundmarks();
 }
 
 function updateSoundmarkDebugTools() {
@@ -932,7 +949,7 @@ function updateSoundmarkDebugTools() {
 function showDebugSoundmarks() {
   resetSoundmarkMarkers();
   soundmarkLastProgress = debugSoundmarkProgress;
-  for (const soundmark of SOUNDMARKS) {
+  for (const soundmark of getVisibleSoundmarks(debugSoundmarkProgress)) {
     spawnSoundmarkMarker(soundmark);
   }
 }
@@ -961,27 +978,131 @@ function renderDebugLyricGuide(progress) {
   guide.setAttribute("aria-label", "湖面に映る、音のしるし");
 }
 
+function getVisibleSoundmarks(progress) {
+  const activeSongId = activeSong?.id ?? SONGS[0]?.id;
+  const eligibleProgress = clamp(progress, 0, 1) + 0.006;
+  const limit = getSoundmarkVisibleLimit();
+  const coreSoundmarks = SOUNDMARKS
+    .filter((soundmark) => soundmark.songId === activeSongId && soundmark.progress <= eligibleProgress)
+    .sort(compareSoundmarkProgress);
+  assignCoreSoundmarkSlots(activeSongId);
+
+  if (coreSoundmarks.length >= limit) return coreSoundmarks.slice(0, limit);
+
+  const extraSlots = Math.max(0, limit - SOUNDMARK_CORE_PER_SONG);
+  const echoSoundmarks = getVisibleEchoSoundmarks(activeSongId, eligibleProgress, extraSlots);
+
+  return [...coreSoundmarks, ...echoSoundmarks].sort(compareSoundmarkProgress);
+}
+
+function getSoundmarkVisibleLimit() {
+  const appRect = $("#app")?.getBoundingClientRect();
+  const width = appRect?.width || window.innerWidth || 1;
+  const height = appRect?.height || window.innerHeight || 1;
+  let extraCount = SOUNDMARK_DESKTOP_EXTRA_COUNT;
+
+  if (width <= 760 || height <= 430) {
+    extraCount = 0;
+  } else if (width <= 980 || height <= 520) {
+    extraCount = SOUNDMARK_MOBILE_EXTRA_COUNT;
+  } else if (width <= 1280 || height <= 650) {
+    extraCount = SOUNDMARK_TABLET_EXTRA_COUNT;
+  }
+
+  return SOUNDMARK_CORE_PER_SONG + extraCount;
+}
+
+function assignCoreSoundmarkSlots(activeSongId) {
+  SOUNDMARKS
+    .filter((soundmark) => soundmark.songId === activeSongId)
+    .sort(compareSoundmarkProgress)
+    .forEach((soundmark, index) => {
+      soundmarkSlotAssignments.set(soundmark.id, index);
+    });
+}
+
+function getVisibleEchoSoundmarks(activeSongId, eligibleProgress, extraSlots) {
+  if (extraSlots <= 0) return [];
+
+  const availableSlots = new Set(
+    Array.from({ length: extraSlots }, (_, index) => SOUNDMARK_CORE_PER_SONG + index),
+  );
+  const eligibleById = new Map(SOUNDMARKS
+    .filter((soundmark) => soundmark.songId !== activeSongId && soundmark.progress <= eligibleProgress)
+    .map((soundmark) => [soundmark.id, soundmark]));
+  const selected = [];
+
+  for (const [soundmarkId, slotIndex] of soundmarkSlotAssignments.entries()) {
+    if (!availableSlots.has(slotIndex)) continue;
+
+    const soundmark = eligibleById.get(soundmarkId);
+    if (!soundmark) continue;
+
+    selected.push(soundmark);
+    availableSlots.delete(slotIndex);
+  }
+
+  if (availableSlots.size <= 0) return selected.sort(compareSoundmarkSlot);
+
+  const selectedIds = new Set(selected.map((soundmark) => soundmark.id));
+  const candidates = [...eligibleById.values()]
+    .filter((soundmark) => !selectedIds.has(soundmark.id))
+    .sort((a, b) => getSoundmarkEchoRank(a, activeSongId) - getSoundmarkEchoRank(b, activeSongId));
+
+  for (const soundmark of candidates) {
+    const slotIndex = Math.min(...availableSlots);
+    soundmarkSlotAssignments.set(soundmark.id, slotIndex);
+    selected.push(soundmark);
+    availableSlots.delete(slotIndex);
+
+    if (availableSlots.size <= 0) break;
+  }
+
+  return selected.sort(compareSoundmarkSlot);
+}
+
+function getSoundmarkEchoRank(soundmark, activeSongId) {
+  const discoveryPenalty = discoveredSoundmarkIds.has(soundmark.id) ? 100000 : 0;
+  const songDistance = Math.abs(SONGS.findIndex((song) => song.id === soundmark.songId)
+    - SONGS.findIndex((song) => song.id === activeSongId));
+  return soundmark.progress * 1000000
+    + discoveryPenalty
+    + songDistance * 12000
+    + (hashString(`${activeSongId}-echo-${soundmark.id}`) % 10000);
+}
+
+function compareSoundmarkProgress(a, b) {
+  if (a.progress !== b.progress) return a.progress - b.progress;
+  return SOUNDMARKS.indexOf(a) - SOUNDMARKS.indexOf(b);
+}
+
+function compareSoundmarkSlot(a, b) {
+  return getSoundmarkSlotIndex(a) - getSoundmarkSlotIndex(b);
+}
+
+function getSoundmarkSlotIndex(soundmark) {
+  return soundmarkSlotAssignments.get(soundmark.id)
+    ?? (SOUNDMARKS.indexOf(soundmark) % SOUNDMARK_SLOT_SYMBOLS.length);
+}
+
+function getSoundmarkDisplaySymbol(soundmark) {
+  return SOUNDMARK_SLOT_SYMBOLS[getSoundmarkSlotIndex(soundmark) % SOUNDMARK_SLOT_SYMBOLS.length]
+    ?? soundmark.symbol;
+}
+
 function updateSoundmarkSystem(progress) {
   const clampedProgress = clamp(progress, 0, 1);
   applySoundmarkPalette(clampedProgress);
 
   if (!activeSong || !player.video?.duration) return;
 
-  if (clampedProgress + SOUNDMARK_REWIND_RESET_DELTA < soundmarkLastProgress) {
-    resetSoundmarkMarkers();
-  }
-
   soundmarkLastProgress = clampedProgress;
-
-  for (const soundmark of SOUNDMARKS) {
-    if (soundmark.progress <= clampedProgress + 0.006) {
-      spawnSoundmarkMarker(soundmark);
-    }
-  }
+  syncSoundmarkMarkers(getVisibleSoundmarks(clampedProgress));
 }
 
 function resetSoundmarks() {
   soundmarkLastProgress = 0;
+  soundmarkSlotAssignments.clear();
   resetSoundmarkMarkers();
   closeSoundmarkPanel({ immediate: true });
 }
@@ -991,6 +1112,29 @@ function resetSoundmarkMarkers() {
   soundmarkPositions.clear();
   $("#soundmark-layer")?.replaceChildren();
   closeSoundmarkPanel({ immediate: true });
+}
+
+function syncSoundmarkMarkers(soundmarks) {
+  const layer = $("#soundmark-layer");
+  if (!layer) return;
+
+  const targetIds = new Set(soundmarks.map((soundmark) => soundmark.id));
+  if (activeSoundmarkId && !targetIds.has(activeSoundmarkId)) {
+    closeSoundmarkPanel({ immediate: true });
+  }
+
+  layer.querySelectorAll(".soundmark-pin").forEach((marker) => {
+    const soundmarkId = marker.dataset.soundmarkId;
+    if (targetIds.has(soundmarkId)) return;
+
+    marker.remove();
+    spawnedSoundmarkIds.delete(soundmarkId);
+    soundmarkPositions.delete(soundmarkId);
+  });
+
+  for (const soundmark of soundmarks) {
+    spawnSoundmarkMarker(soundmark);
+  }
 }
 
 function spawnSoundmarkMarker(soundmark) {
@@ -1004,6 +1148,9 @@ function spawnSoundmarkMarker(soundmark) {
   marker.type = "button";
   marker.className = "soundmark-pin";
   marker.dataset.soundmarkId = soundmark.id;
+  marker.dataset.songId = soundmark.songId;
+  marker.dataset.slot = String(getSoundmarkSlotIndex(soundmark));
+  marker.classList.toggle("visited", discoveredSoundmarkIds.has(soundmark.id));
   marker.style.left = `${position.x * 100}%`;
   marker.style.top = `${(1 - position.y) * 100}%`;
   marker.setAttribute("aria-label", `Open soundmark: ${soundmark.title}`);
@@ -1011,7 +1158,7 @@ function spawnSoundmarkMarker(soundmark) {
 
   const symbol = document.createElement("span");
   symbol.className = "soundmark-symbol";
-  symbol.textContent = soundmark.symbol;
+  symbol.textContent = getSoundmarkDisplaySymbol(soundmark);
   marker.appendChild(symbol);
 
   marker.addEventListener("click", (event) => {
@@ -1035,13 +1182,14 @@ function getSoundmarkPosition(soundmark) {
   const seed = hashString(`${activeSong?.id ?? "song"}-${soundmark.id}`);
   const placementRect = getSoundmarkPlacementRect();
   const forbiddenZones = getSoundmarkPlacementForbiddenZones();
+  const existingAvoidZones = getExistingSoundmarkAvoidZones();
   const idealPosition = createSoundmarkPlacementCandidate(soundmark, seed, placementRect, 0);
   let bestCandidate = idealPosition;
   let bestScore = -Infinity;
 
   for (let attempt = 0; attempt < SOUNDMARK_PLACEMENT_CANDIDATE_COUNT; attempt += 1) {
     const candidate = createSoundmarkPlacementCandidate(soundmark, seed, placementRect, attempt);
-    const score = getSoundmarkPlacementCandidateScore(candidate, idealPosition, forbiddenZones);
+    const score = getSoundmarkPlacementCandidateScore(candidate, idealPosition, forbiddenZones, existingAvoidZones);
     if (score > bestScore) {
       bestCandidate = candidate;
       bestScore = score;
@@ -1081,13 +1229,41 @@ function createSoundmarkPlacementCandidate(soundmark, seed, placementRect, attem
   return { x, y };
 }
 
-function getSoundmarkPlacementCandidateScore(candidate, idealPosition, forbiddenZones) {
+function getSoundmarkPlacementCandidateScore(candidate, idealPosition, forbiddenZones, existingAvoidZones) {
   const insideForbiddenZone = forbiddenZones.some((zone) => isInsideRect(candidate, zone.rect));
   const dx = candidate.x - idealPosition.x;
   const dy = candidate.y - idealPosition.y;
   const idealDistancePenalty = (dx * dx + dy * dy) * 80;
   const avoidScore = forbiddenZones.reduce((score, zone) => score + getRectAvoidScore(candidate, zone.rect), 0);
-  return (insideForbiddenZone ? -100 : 100) + Math.min(avoidScore, 12) * 0.02 - idealDistancePenalty;
+  const existingMarkerPenalty = existingAvoidZones.reduce(
+    (penalty, zone) => penalty + getExistingMarkerAvoidPenalty(candidate, zone.rect),
+    0,
+  );
+  return (insideForbiddenZone ? -100 : 100)
+    + Math.min(avoidScore, 12) * 0.02
+    - idealDistancePenalty
+    - existingMarkerPenalty;
+}
+
+function getExistingMarkerAvoidPenalty(position, rect) {
+  const outsideDx = Math.max(rect.left - position.x, 0, position.x - rect.right);
+  const outsideDy = Math.max(rect.bottom - position.y, 0, position.y - rect.top);
+
+  if (outsideDx > 0 || outsideDy > 0) {
+    const width = Math.max(rect.right - rect.left, 0.001);
+    const height = Math.max(rect.top - rect.bottom, 0.001);
+    const distance = Math.hypot(outsideDx / width, outsideDy / height);
+    return distance < 0.45 ? (1 - distance / 0.45) ** 2 * 5 : 0;
+  }
+
+  const halfWidth = Math.max((rect.right - rect.left) * 0.5, 0.001);
+  const halfHeight = Math.max((rect.top - rect.bottom) * 0.5, 0.001);
+  const centerX = (rect.left + rect.right) * 0.5;
+  const centerY = (rect.bottom + rect.top) * 0.5;
+  const dx = Math.abs(position.x - centerX) / halfWidth;
+  const dy = Math.abs(position.y - centerY) / halfHeight;
+  const centerPressure = Math.max(0, 1 - Math.max(dx, dy));
+  return 28 + centerPressure * 24;
 }
 
 function getRectAvoidScore(position, rect) {
@@ -1139,21 +1315,53 @@ function getSoundmarkPlacementRect() {
 
 function getSoundmarkPlacementForbiddenZones() {
   const toriiRect = getToriiExclusionRect();
-  const panelRect = getSoundmarkPanelExclusionRect();
-  return [
+  const zones = [
     {
       id: "torii",
       label: "No marker: Torii",
       rect: expandSoundmarkRectForPin(toriiRect),
       displayRect: toriiRect,
     },
-    {
+  ];
+
+  if (activeSoundmarkId) {
+    const panelRect = getSoundmarkPanelExclusionRect();
+    zones.push({
       id: "panel",
       label: "No marker: Panel",
       rect: expandSoundmarkRectForPin(panelRect),
       displayRect: panelRect,
+    });
+  }
+
+  return zones;
+}
+
+function getExistingSoundmarkAvoidZones() {
+  const marginPx = getExistingSoundmarkAvoidMarginPx();
+  const halfSize = getSoundmarkPinHalfSize(marginPx);
+  return Array.from(soundmarkPositions.entries()).map(([id, position]) => ({
+    id: `soundmark-${id}`,
+    rect: {
+      left: position.x - halfSize.x,
+      right: position.x + halfSize.x,
+      bottom: position.y - halfSize.y,
+      top: position.y + halfSize.y,
     },
-  ];
+  }));
+}
+
+function getExistingSoundmarkAvoidMarginPx() {
+  const appRect = $("#app")?.getBoundingClientRect();
+  const appWidth = appRect?.width || window.innerWidth || 1;
+  const appHeight = appRect?.height || window.innerHeight || 1;
+  if (appHeight <= SOUNDMARK_EXISTING_AVOID_MOBILE_HEIGHT_PX) return 0;
+
+  return clamp(
+    Math.min(appWidth, appHeight) * 0.022,
+    SOUNDMARK_EXISTING_AVOID_MIN_MARGIN_PX,
+    SOUNDMARK_EXISTING_AVOID_MARGIN_PX,
+  );
 }
 
 function expandSoundmarkRectForPin(rect) {
@@ -1166,13 +1374,13 @@ function expandSoundmarkRectForPin(rect) {
   };
 }
 
-function getSoundmarkPinHalfSize() {
+function getSoundmarkPinHalfSize(extraMarginPx = 0) {
   const appRect = $("#app")?.getBoundingClientRect();
   const appWidth = appRect?.width || window.innerWidth || 1;
   const appHeight = appRect?.height || window.innerHeight || 1;
   return {
-    x: SOUNDMARK_PIN_HALF_WIDTH_PX / appWidth,
-    y: SOUNDMARK_PIN_HALF_HEIGHT_PX / appHeight,
+    x: (SOUNDMARK_PIN_HALF_WIDTH_PX + extraMarginPx) / appWidth,
+    y: (SOUNDMARK_PIN_HALF_HEIGHT_PX + extraMarginPx) / appHeight,
   };
 }
 
@@ -1205,6 +1413,10 @@ function updateSoundmarkPlacementOverlay() {
     `center x ${(rect.left * 100).toFixed(0)}-${(rect.right * 100).toFixed(0)}%`,
     `center y ${(rect.bottom * 100).toFixed(0)}-${(rect.top * 100).toFixed(0)}%`,
   ].join(" / ");
+
+  overlay.querySelectorAll(".soundmark-placement-forbidden").forEach((element) => {
+    element.hidden = true;
+  });
 
   for (const zone of forbiddenZones) {
     const element = overlay.querySelector(`[data-zone="${zone.id}"]`);
@@ -1250,6 +1462,7 @@ function openSoundmarkPanel(soundmark) {
   if (!panel) return;
 
   clearTimeout(soundmarkCloseTimer);
+  if (!DEBUG_SOUNDMARKS) recordSoundmarkDiscovery(soundmark.id);
   activeSoundmarkId = soundmark.id;
   $("#app")?.classList.add("soundmark-panel-open");
 
@@ -1263,6 +1476,7 @@ function openSoundmarkPanel(soundmark) {
   panel.hidden = false;
   panel.dataset.phase = getLyricGuidePhaseLabel(soundmarkLastProgress);
   scheduleAnimationFrame(() => panel.classList.add("is-open"));
+  scheduleAnimationFrame(updateSoundmarkPlacementOverlay);
 }
 
 function closeSoundmarkPanel(options = {}) {
@@ -1284,6 +1498,33 @@ function closeSoundmarkPanel(options = {}) {
   soundmarkCloseTimer = setTimeout(() => {
     if (!activeSoundmarkId) panel.hidden = true;
   }, 300);
+  scheduleAnimationFrame(updateSoundmarkPlacementOverlay);
+}
+
+function readDiscoveredSoundmarkIds() {
+  try {
+    const parsed = JSON.parse(localStorage.getItem(SOUNDMARK_COLLECTION_KEY) ?? "[]");
+    if (!Array.isArray(parsed)) return [];
+    const validIds = new Set(SOUNDMARKS.map((soundmark) => soundmark.id));
+    return parsed.filter((id) => validIds.has(id));
+  } catch {
+    return [];
+  }
+}
+
+function recordSoundmarkDiscovery(soundmarkId) {
+  if (!soundmarkId || discoveredSoundmarkIds.has(soundmarkId)) return;
+
+  discoveredSoundmarkIds.add(soundmarkId);
+  try {
+    localStorage.setItem(SOUNDMARK_COLLECTION_KEY, JSON.stringify([...discoveredSoundmarkIds].sort()));
+  } catch {
+    // Soundmark collection state is a visual enhancement, not required for playback.
+  }
+
+  document.querySelectorAll(".soundmark-pin").forEach((marker) => {
+    marker.classList.toggle("visited", discoveredSoundmarkIds.has(marker.dataset.soundmarkId));
+  });
 }
 
 function renderSoundmarkTags(tags) {
