@@ -55,6 +55,9 @@ const SOUNDMARK_DESKTOP_EXTRA_COUNT = 4;
 const SOUNDMARK_SLOT_SYMBOLS = ["♪", "♫", "♩", "♬", "♭", "♯", "♮", "𝄞"];
 const NOTE_PROGRESS_SHOW_AT = 0.985;
 const NOTE_PROGRESS_VISIBLE_MS = 6000;
+const SCENE_TRANSITION_IN_MS = 180;
+const SCENE_TRANSITION_OUT_MS = 1100;
+const SCENE_PROGRESS_TWEEN_MS = 1000;
 const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug");
 const DEBUG_TORII_EXCLUSION_ZONE = DEBUG_MODE === "torii-zone";
 const DEBUG_TORII_REFLECTION = DEBUG_MODE === "torii-reflection";
@@ -186,6 +189,9 @@ let soundmarkLastProgress = 0;
 let soundmarkCloseTimer = null;
 let noteProgressToastTimer = null;
 let noteProgressShownSongId = null;
+let sceneTransitionActive = false;
+let visualSongProgress = 0;
+let sceneProgressTweenToken = 0;
 let debugSoundmarkProgress = DEBUG_SOUNDMARK_DEFAULT_PROGRESS;
 let debugPlaybackActive = false;
 let playbackActive = false;
@@ -311,7 +317,7 @@ function renderSongList() {
       <em>${song.artist}</em>
     `;
     button.addEventListener("click", () => {
-      selectSong(song.id);
+      transitionToSong(song.id);
       setSongMenuOpen(false);
     });
     list.appendChild(button);
@@ -398,10 +404,14 @@ function updateFullscreenControl() {
   if (buttons.length <= 0 || !app) return;
 
   const active = document.fullscreenElement === app;
+  const soundmarkPanelOpen = app.classList.contains("soundmark-panel-open");
   app.classList.toggle("is-fullscreen", active);
   for (const button of buttons) {
     if (button.hidden) continue;
+    const blockedByPanel = button.id === "btn-fullscreen" && soundmarkPanelOpen;
     button.classList.remove("is-denied");
+    button.disabled = blockedByPanel;
+    button.setAttribute("aria-hidden", String(blockedByPanel));
     button.textContent = active ? "退出" : "全画面";
     button.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
     button.setAttribute("aria-pressed", String(active));
@@ -449,13 +459,13 @@ function stopPlayback() {
 
 function selectAdjacentSong(direction) {
   if (!activeSong) {
-    selectSong(SONGS[0].id);
+    transitionToSong(SONGS[0].id);
     return;
   }
 
   const currentIndex = Math.max(0, SONGS.findIndex((song) => song.id === activeSong.id));
   const nextIndex = (currentIndex + direction + SONGS.length) % SONGS.length;
-  selectSong(SONGS[nextIndex].id);
+  transitionToSong(SONGS[nextIndex].id);
 }
 
 function setSongMenuOpen(open) {
@@ -510,6 +520,12 @@ function formatPlayerTime(ms) {
   const minutes = Math.floor(safeMs / 60000);
   const seconds = Math.floor((safeMs % 60000) / 1000);
   return `${minutes}:${String(seconds).padStart(2, "0")}`;
+}
+
+function wait(ms) {
+  return new Promise((resolve) => {
+    setTimeout(resolve, ms);
+  });
 }
 
 function initializeVolumeControl() {
@@ -603,7 +619,84 @@ function setDockCollapsed(collapsed) {
   setTimeout(updateSoundmarkPlacementOverlay, 220);
 }
 
-function selectSong(songId) {
+async function transitionToSong(songId) {
+  if (sceneTransitionActive) return;
+  if (activeSong?.id === songId && !DEBUG_SOUNDMARKS) return;
+
+  sceneTransitionActive = true;
+  try {
+    await setSceneTransitionVisible(true);
+    selectSong(songId, { resetSceneProgress: false });
+    await tweenVisualSongProgress(visualSongProgress, 0, SCENE_PROGRESS_TWEEN_MS);
+    await wait(Math.max(0, SCENE_TRANSITION_OUT_MS - SCENE_PROGRESS_TWEEN_MS));
+  } finally {
+    await setSceneTransitionVisible(false);
+    sceneTransitionActive = false;
+  }
+}
+
+function setSceneTransitionVisible(visible) {
+  const overlay = $("#scene-transition");
+  if (!overlay) return Promise.resolve();
+
+  if (visible) {
+    overlay.hidden = false;
+    return new Promise((resolve) => {
+      scheduleAnimationFrame(() => {
+        overlay.classList.add("is-active");
+        setTimeout(resolve, SCENE_TRANSITION_IN_MS);
+      });
+    });
+  }
+
+  overlay.classList.remove("is-active");
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      if (!overlay.classList.contains("is-active")) overlay.hidden = true;
+      resolve();
+    }, SCENE_TRANSITION_IN_MS);
+  });
+}
+
+function tweenVisualSongProgress(from, to, durationMs) {
+  const token = ++sceneProgressTweenToken;
+  const startTime = performance.now();
+  const startValue = clamp(from, 0, 1);
+  const endValue = clamp(to, 0, 1);
+
+  return new Promise((resolve) => {
+    const step = (now) => {
+      if (token !== sceneProgressTweenToken) {
+        resolve(false);
+        return;
+      }
+
+      const progress = durationMs > 0 ? clamp((now - startTime) / durationMs, 0, 1) : 1;
+      const eased = easeInOutCubic(progress);
+      setVisualSongProgress(mix(startValue, endValue, eased));
+
+      if (progress < 1) {
+        requestAnimationFrame(step);
+        return;
+      }
+
+      resolve(true);
+    };
+
+    requestAnimationFrame(step);
+  });
+}
+
+function cancelSceneProgressTween() {
+  sceneProgressTweenToken += 1;
+}
+
+function setVisualSongProgress(progress) {
+  visualSongProgress = clamp(progress, 0, 1);
+  lake.setSongProgress(visualSongProgress);
+}
+
+function selectSong(songId, { resetSceneProgress = true } = {}) {
   activeSong = findSong(songId);
   phrases = [];
   lyricWords = [];
@@ -623,7 +716,7 @@ function selectSong(songId) {
 
   setTransportEnabled(false);
   markActiveSong();
-  resetDisplay();
+  resetDisplay({ resetSceneProgress });
   if (DEBUG_SOUNDMARKS) {
     $("#status").textContent = "Soundmark debug mode. Playback is not required.";
     setDebugSoundmarkProgress(debugSoundmarkProgress);
@@ -642,7 +735,7 @@ function markActiveSong() {
   });
 }
 
-function resetDisplay() {
+function resetDisplay({ resetSceneProgress = true } = {}) {
   $("#song-title").textContent = activeSong.title;
   $("#song-artist").textContent = activeSong.artist;
   $("#now-position").textContent = formatPlayerTime(0);
@@ -653,7 +746,10 @@ function resetDisplay() {
   updateProgressDisplay(0);
   updatePlayPauseButton();
   lake.setAudioState({ amplitude: 0, chorus: false });
-  lake.setSongProgress(0);
+  if (resetSceneProgress) {
+    cancelSceneProgressTween();
+    setVisualSongProgress(0);
+  }
   resetLyricGuide();
   resetSoundmarks();
   hideNoteProgressToast();
@@ -698,6 +794,8 @@ function updateProgressDisplay(progress, { syncSlider = true } = {}) {
 }
 
 function updatePlayback(position) {
+  if (sceneTransitionActive) return;
+
   const duration = player.video?.duration ?? 0;
   const progress = duration > 0 ? clamp(position / duration, 0, 1) : 0;
   const chorus = segments.find((segment) => segment.chorus && segment.startTime <= position && position < segment.endTime);
@@ -719,7 +817,8 @@ function updatePlayback(position) {
   $("#amp-label").textContent = amplitude.toFixed(2);
 
   lake.setAudioState({ amplitude, chorus: Boolean(chorus) });
-  lake.setSongProgress(progress);
+  cancelSceneProgressTween();
+  setVisualSongProgress(progress);
   updateSoundmarkSystem(progress);
   updateNoteProgressToast(progress);
   updateLyricGuide(position, progress, Boolean(chorus));
@@ -767,7 +866,6 @@ function updateLyricGuide(position, progress, chorus) {
 
   guide.classList.remove("is-empty");
   guide.setAttribute("aria-label", phrase.text);
-  updateLyricGuideWordState(position);
 }
 
 function findLyricGuidePhrase(position) {
@@ -799,10 +897,8 @@ function renderLyricGuidePhrase(phrase) {
 
     lineUnits.forEach((unit, index) => {
       const word = document.createElement("span");
-      word.className = "guide-word";
+      word.className = "guide-word active";
       word.textContent = `${shouldPrefixGuideSpace(lineUnits[index - 1], unit) ? " " : ""}${unit.text}`;
-      if (Number.isFinite(unit.startTime)) word.dataset.start = String(unit.startTime);
-      if (Number.isFinite(unit.endTime)) word.dataset.end = String(unit.endTime);
       line.appendChild(word);
     });
 
@@ -856,22 +952,6 @@ function splitLyricGuideUnits(units) {
   }
 
   return [units.slice(0, bestIndex), units.slice(bestIndex)];
-}
-
-function updateLyricGuideWordState(position) {
-  const guide = $("#lyric-guide");
-  if (!guide) return;
-
-  guide.querySelectorAll(".guide-word").forEach((word) => {
-    const start = Number(word.dataset.start);
-    const end = Number(word.dataset.end);
-    const timed = Number.isFinite(start) && Number.isFinite(end);
-    const active = timed && start - 60 <= position && position < end + 140;
-    const past = timed && end + 140 <= position;
-
-    word.classList.toggle("active", active);
-    word.classList.toggle("past", past);
-  });
 }
 
 function hideLyricGuide() {
@@ -952,12 +1032,13 @@ function renderSoundmarkDebugTools() {
 }
 
 function setDebugSoundmarkProgress(progress) {
+  cancelSceneProgressTween();
   debugSoundmarkProgress = clamp(progress, 0, 1);
   soundmarkLastProgress = debugSoundmarkProgress;
   $("#now-position").textContent = formatPlayerTime(debugSoundmarkProgress * DEBUG_PLAYER_DURATION_MS);
   $("#now-duration").textContent = formatPlayerTime(DEBUG_PLAYER_DURATION_MS);
   updateProgressDisplay(debugSoundmarkProgress);
-  lake.setSongProgress(debugSoundmarkProgress);
+  setVisualSongProgress(debugSoundmarkProgress);
   lake.setAudioState({
     amplitude: 0.36,
     chorus: debugSoundmarkProgress >= 0.42 && debugSoundmarkProgress <= 0.72,
@@ -1502,6 +1583,7 @@ function openSoundmarkPanel(soundmark) {
   if (!DEBUG_SOUNDMARKS) recordSoundmarkDiscovery(soundmark.id);
   activeSoundmarkId = soundmark.id;
   $("#app")?.classList.add("soundmark-panel-open");
+  updateFullscreenControl();
 
   $("#soundmark-title").textContent = soundmark.title;
   $("#soundmark-body").textContent = soundmark.body;
@@ -1524,6 +1606,7 @@ function closeSoundmarkPanel(options = {}) {
   clearTimeout(soundmarkCloseTimer);
   activeSoundmarkId = null;
   $("#app")?.classList.remove("soundmark-panel-open");
+  updateFullscreenControl();
   markActiveSoundmark();
 
   panel.classList.remove("is-open");
@@ -2175,6 +2258,13 @@ function clamp(value, min, max) {
 
 function mix(a, b, t) {
   return a * (1 - t) + b * t;
+}
+
+function easeInOutCubic(value) {
+  const t = clamp(value, 0, 1);
+  return t < 0.5
+    ? 4 * t * t * t
+    : 1 - ((-2 * t + 2) ** 3) / 2;
 }
 
 function smoothstep(edge0, edge1, value) {

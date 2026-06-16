@@ -87,7 +87,7 @@ button {
 .fullscreen-toggle {
   position: absolute;
   top: clamp(10px, 2.8vh, 18px);
-  left: clamp(10px, 2.8vh, 18px);
+  right: clamp(10px, 2.8vh, 18px);
   z-index: 8;
   display: none;
   min-height: 34px;
@@ -116,6 +116,7 @@ button {
     border-color 160ms ease,
     background 160ms ease,
     opacity 160ms ease,
+    visibility 160ms ease,
     transform 160ms ease;
 }
 
@@ -128,6 +129,13 @@ button {
 .fullscreen-toggle.is-denied {
   border-color: rgba(255, 218, 116, 0.64);
   color: #fff3c4;
+}
+
+#app.soundmark-panel-open .fullscreen-toggle {
+  visibility: hidden;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-4px);
 }
 
 .orientation-fullscreen-toggle {
@@ -163,6 +171,30 @@ button {
 .orientation-fullscreen-toggle.is-denied {
   border-color: rgba(255, 218, 116, 0.64);
   color: #fff3c4;
+}
+
+.scene-transition {
+  position: absolute;
+  inset: 0;
+  z-index: 7;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(236, 255, 255, 0.22), rgba(236, 255, 255, 0) 34%),
+    radial-gradient(ellipse at 50% 72%, rgba(132, 232, 232, 0.14), rgba(132, 232, 232, 0) 46%),
+    linear-gradient(180deg, rgba(4, 16, 28, 0.24), rgba(4, 16, 28, 0.46));
+  opacity: 0;
+  pointer-events: none;
+  -webkit-backdrop-filter: blur(3px) saturate(1.08) brightness(1.04);
+  backdrop-filter: blur(3px) saturate(1.08) brightness(1.04);
+  transition: opacity 260ms ease;
+}
+
+.scene-transition.is-active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.scene-transition[hidden] {
+  display: none;
 }
 
 @media (hover: none) and (pointer: coarse) and (max-width: 920px) {
@@ -266,29 +298,16 @@ button {
   animation: soundmark-float 3600ms ease-in-out infinite;
 }
 
-.soundmark-symbol::after {
-  position: absolute;
-  left: 50%;
-  bottom: -9px;
-  width: 2px;
-  height: 24px;
-  background: linear-gradient(180deg, var(--soundmark-core), rgba(255, 255, 255, 0));
-  content: "";
-  opacity: 0.64;
-  transform: translateX(-50%);
-}
-
 .soundmark-unread {
   position: absolute;
   top: 7px;
   right: 8px;
-  width: 7px;
-  height: 7px;
-  border: 1px solid color-mix(in srgb, var(--soundmark-core), transparent 8%);
+  width: 9px;
+  height: 9px;
   background:
     linear-gradient(135deg, color-mix(in srgb, var(--soundmark-core), transparent 12%), var(--soundmark-accent));
   box-shadow:
-    0 0 8px color-mix(in srgb, var(--soundmark-glow), transparent 10%),
+    0 0 9px color-mix(in srgb, var(--soundmark-glow), transparent 8%),
     0 1px 5px rgba(0, 18, 28, 0.36);
   opacity: 0.86;
   pointer-events: none;
@@ -318,6 +337,7 @@ button {
   --soundmark-accent: rgba(125, 241, 237, 0.82);
   --soundmark-glow: rgba(92, 224, 229, 0.36);
   --soundmark-caustic: rgba(255, 255, 255, 0.26);
+  --soundmark-scrollbar-space: 14px;
   position: absolute;
   top: var(--soundmark-panel-top);
   right: clamp(20px, 4vw, 58px);
@@ -363,9 +383,11 @@ button {
 .soundmark-content {
   flex: 1 1 auto;
   min-height: 0;
+  padding-inline-end: var(--soundmark-scrollbar-space);
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
+  scrollbar-gutter: stable;
   scrollbar-color: color-mix(in srgb, var(--soundmark-border), transparent 34%) transparent;
   scrollbar-width: thin;
 }
@@ -706,10 +728,6 @@ button {
     opacity 160ms ease,
     text-shadow 180ms ease,
     filter 180ms ease;
-}
-
-.guide-word.past {
-  opacity: 0.62;
 }
 
 .guide-word.active {
@@ -1778,6 +1796,7 @@ button {
   .soundmark-panel {
     --soundmark-panel-top: clamp(44px, 11vh, 78px);
     --soundmark-panel-padding: 20px;
+    --soundmark-scrollbar-space: 12px;
     --soundmark-panel-max: min(560px, calc(100% - var(--soundmark-panel-top) - var(--soundmark-panel-bottom-safe)));
     top: var(--soundmark-panel-top);
     right: clamp(14px, 3vw, 28px);
@@ -1903,6 +1922,7 @@ button {
     right: 12px;
     width: min(46vw, 260px);
     --soundmark-panel-padding: 16px;
+    --soundmark-scrollbar-space: 10px;
     padding: var(--soundmark-panel-padding);
   }
 
@@ -2020,6 +2040,7 @@ button {
   .soundmark-panel {
     --soundmark-panel-top: clamp(34px, 9vh, 58px);
     --soundmark-panel-padding: 18px;
+    --soundmark-scrollbar-space: 10px;
     --soundmark-panel-bottom-safe: calc(94px + clamp(12px, 2.6vh, 24px) + 18px);
     --soundmark-panel-max: min(560px, calc(100% - var(--soundmark-panel-top) - var(--soundmark-panel-bottom-safe)));
     top: var(--soundmark-panel-top);
@@ -2144,6 +2165,7 @@ button {
   .soundmark-panel {
     --soundmark-panel-top: 28px;
     --soundmark-panel-padding: 14px;
+    --soundmark-scrollbar-space: 8px;
     --soundmark-panel-bottom-safe: 110px;
     --soundmark-panel-max: min(560px, calc(100% - var(--soundmark-panel-top) - var(--soundmark-panel-bottom-safe)));
     top: var(--soundmark-panel-top);

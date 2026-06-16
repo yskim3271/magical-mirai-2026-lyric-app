@@ -1,6 +1,7 @@
 import * as THREE from "three";
 
 const MAX_RIPPLES = 24;
+const POINTER_WATER_MAX_Y = 0.565;
 const assetPath = (path) => `${import.meta.env.BASE_URL}${path}`;
 const BACKDROP_TEXTURES = [
   ["uBackdrop", assetPath("assets/timecycle-clean/lake-day-clean.png")],
@@ -845,14 +846,16 @@ class LakeScene {
   handlePointer(event) {
     if (event.type === "pointermove" && event.buttons !== 1) return;
 
-    const now = performance.now();
-    if (event.type === "pointermove" && now - this.pointerRippleAt < 90) return;
-    this.pointerRippleAt = now;
-
     const rect = this.renderer.domElement.getBoundingClientRect();
     const x = (event.clientX - rect.left) / Math.max(rect.width, 1);
     const screenY = (event.clientY - rect.top) / Math.max(rect.height, 1);
     const y = 1 - screenY;
+    if (x < 0 || x > 1 || screenY < 0 || screenY > 1 || y > POINTER_WATER_MAX_Y) return;
+
+    const now = performance.now();
+    if (event.type === "pointermove" && now - this.pointerRippleAt < 90) return;
+    this.pointerRippleAt = now;
+
     this.addRipple(x, y, event.type === "pointerdown" ? 1.0 : 0.62);
   }
 
