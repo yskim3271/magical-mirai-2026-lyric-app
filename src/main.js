@@ -53,6 +53,8 @@ const SOUNDMARK_MOBILE_EXTRA_COUNT = 1;
 const SOUNDMARK_TABLET_EXTRA_COUNT = 2;
 const SOUNDMARK_DESKTOP_EXTRA_COUNT = 4;
 const SOUNDMARK_SLOT_SYMBOLS = ["♪", "♫", "♩", "♬", "♭", "♯", "♮", "𝄞"];
+const NOTE_PROGRESS_SHOW_AT = 0.985;
+const NOTE_PROGRESS_VISIBLE_MS = 6000;
 const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug");
 const DEBUG_TORII_EXCLUSION_ZONE = DEBUG_MODE === "torii-zone";
 const DEBUG_TORII_REFLECTION = DEBUG_MODE === "torii-reflection";
@@ -182,6 +184,8 @@ const discoveredSoundmarkIds = new Set(readDiscoveredSoundmarkIds());
 let activeSoundmarkId = null;
 let soundmarkLastProgress = 0;
 let soundmarkCloseTimer = null;
+let noteProgressToastTimer = null;
+let noteProgressShownSongId = null;
 let debugSoundmarkProgress = DEBUG_SOUNDMARK_DEFAULT_PROGRESS;
 let debugPlaybackActive = false;
 let playbackActive = false;
@@ -266,6 +270,7 @@ player.addListener({
   onPlay() {
     playbackActive = true;
     lake.setAmbientRipplesEnabled(false);
+    hideNoteProgressToast();
     updatePlayPauseButton();
   },
 
@@ -283,6 +288,7 @@ player.addListener({
     lastBeatToken = null;
     previousLyricPosition = null;
     activeGuidePhraseKey = null;
+    hideNoteProgressToast();
     resetSoundmarks();
     updatePlayback(0);
     updatePlayPauseButton();
@@ -336,56 +342,76 @@ function bindControls() {
 }
 
 function initializeFullscreenControl() {
-  const button = $("#btn-fullscreen");
+  const buttons = getFullscreenButtons();
   const app = $("#app");
-  if (!button || !app) return;
+  if (buttons.length <= 0 || !app) return;
 
   const fullscreenAvailable = Boolean(document.fullscreenEnabled && app.requestFullscreen);
   if (!fullscreenAvailable) {
-    button.hidden = true;
+    for (const button of buttons) {
+      button.hidden = true;
+    }
     return;
   }
 
-  button.hidden = false;
-  button.classList.add("is-supported");
+  for (const button of buttons) {
+    button.hidden = false;
+    button.classList.add("is-supported");
+    button.addEventListener("click", handleFullscreenToggle);
+  }
+
   updateFullscreenControl();
-
-  button.addEventListener("click", async () => {
-    try {
-      if (document.fullscreenElement) {
-        await document.exitFullscreen();
-      } else {
-        await app.requestFullscreen({ navigationUI: "hide" });
-        try {
-          await screen.orientation?.lock?.("landscape");
-        } catch {
-          // Orientation lock support varies by browser and is optional.
-        }
-      }
-    } catch {
-      button.classList.add("is-denied");
-      button.textContent = "全画面不可";
-      setTimeout(updateFullscreenControl, 1400);
-      return;
-    }
-
-    updateFullscreenControl();
-  });
-
   document.addEventListener("fullscreenchange", updateFullscreenControl);
 }
 
-function updateFullscreenControl() {
-  const button = $("#btn-fullscreen");
+async function handleFullscreenToggle() {
   const app = $("#app");
-  if (!button || !app || button.hidden) return;
+  const buttons = getFullscreenButtons();
+  if (!app) return;
+
+  try {
+    if (document.fullscreenElement) {
+      await document.exitFullscreen();
+    } else {
+      await app.requestFullscreen({ navigationUI: "hide" });
+      try {
+        await screen.orientation?.lock?.("landscape");
+      } catch {
+        // Orientation lock support varies by browser and is optional.
+      }
+    }
+  } catch {
+    for (const button of buttons) {
+      button.classList.add("is-denied");
+      button.textContent = "全画面不可";
+    }
+    setTimeout(updateFullscreenControl, 1400);
+    return;
+  }
+
+  updateFullscreenControl();
+}
+
+function updateFullscreenControl() {
+  const buttons = getFullscreenButtons();
+  const app = $("#app");
+  if (buttons.length <= 0 || !app) return;
 
   const active = document.fullscreenElement === app;
   app.classList.toggle("is-fullscreen", active);
-  button.classList.remove("is-denied");
-  button.textContent = active ? "退出" : "全画面";
-  button.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
-  button.setAttribute("aria-pressed", String(active));
+  for (const button of buttons) {
+    if (button.hidden) continue;
+    button.classList.remove("is-denied");
+    button.textContent = active ? "退出" : "全画面";
+    button.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+    button.setAttribute("aria-pressed", String(active));
+  }
+}
+
+function getFullscreenButtons() {
+  return ["#btn-fullscreen", "#btn-orientation-fullscreen"]
+    .map((selector) => $(selector))
+    .filter(Boolean);
 }
 
 function togglePlayback() {
@@ -409,12 +435,14 @@ function stopPlayback() {
   if (DEBUG_SOUNDMARKS) {
     debugPlaybackActive = false;
     lake.setAmbientRipplesEnabled(true);
+    hideNoteProgressToast();
     setDebugSoundmarkProgress(debugSoundmarkProgress);
     updatePlayPauseButton();
     return;
   }
 
   playbackActive = false;
+  hideNoteProgressToast();
   player.requestStop();
   updatePlayPauseButton();
 }
@@ -584,12 +612,14 @@ function selectSong(songId) {
   segments = [];
   readyToPlay = false;
   playbackActive = false;
+  noteProgressShownSongId = null;
   lyricChunkCursor = 0;
   previousPosition = 0;
   lastBeatToken = null;
   previousLyricPosition = null;
   activeGuidePhraseKey = null;
   resetSoundmarks();
+  hideNoteProgressToast();
 
   setTransportEnabled(false);
   markActiveSong();
@@ -626,6 +656,7 @@ function resetDisplay() {
   lake.setSongProgress(0);
   resetLyricGuide();
   resetSoundmarks();
+  hideNoteProgressToast();
 }
 
 function setTransportEnabled(enabled) {
@@ -690,6 +721,7 @@ function updatePlayback(position) {
   lake.setAudioState({ amplitude, chorus: Boolean(chorus) });
   lake.setSongProgress(progress);
   updateSoundmarkSystem(progress);
+  updateNoteProgressToast(progress);
   updateLyricGuide(position, progress, Boolean(chorus));
   pulseBeatIfNeeded(beat, position, amplitude);
   spawnDueLyricChunks(position, amplitude, Boolean(chorus));
@@ -1161,6 +1193,11 @@ function spawnSoundmarkMarker(soundmark) {
   symbol.textContent = getSoundmarkDisplaySymbol(soundmark);
   marker.appendChild(symbol);
 
+  const unreadIndicator = document.createElement("span");
+  unreadIndicator.className = "soundmark-unread";
+  unreadIndicator.setAttribute("aria-hidden", "true");
+  marker.appendChild(unreadIndicator);
+
   marker.addEventListener("click", (event) => {
     event.stopPropagation();
     lake.addRipple(position.x, position.y, 0.62);
@@ -1499,6 +1536,47 @@ function closeSoundmarkPanel(options = {}) {
     if (!activeSoundmarkId) panel.hidden = true;
   }, 300);
   scheduleAnimationFrame(updateSoundmarkPlacementOverlay);
+}
+
+function updateNoteProgressToast(progress) {
+  if (DEBUG_SOUNDMARKS || isProgressScrubbing || !activeSong) return;
+  if (progress < NOTE_PROGRESS_SHOW_AT) return;
+  if (noteProgressShownSongId === activeSong.id) return;
+
+  noteProgressShownSongId = activeSong.id;
+  showNoteProgressToast();
+}
+
+function showNoteProgressToast() {
+  const toast = $("#note-progress-toast");
+  const count = $("#note-progress-count");
+  if (!toast || !count) return;
+
+  const total = SOUNDMARKS.length;
+  const found = SOUNDMARKS.filter((soundmark) => discoveredSoundmarkIds.has(soundmark.id)).length;
+  const progress = total > 0 ? clamp(found / total, 0, 1) : 0;
+
+  count.textContent = `${found}/${total}`;
+  toast.style.setProperty("--note-progress", `${(progress * 100).toFixed(1)}%`);
+  toast.hidden = false;
+  scheduleAnimationFrame(() => toast.classList.add("is-visible"));
+
+  clearTimeout(noteProgressToastTimer);
+  noteProgressToastTimer = setTimeout(() => {
+    hideNoteProgressToast();
+  }, NOTE_PROGRESS_VISIBLE_MS);
+}
+
+function hideNoteProgressToast() {
+  const toast = $("#note-progress-toast");
+  if (!toast) return;
+
+  clearTimeout(noteProgressToastTimer);
+  noteProgressToastTimer = null;
+  toast.classList.remove("is-visible");
+  setTimeout(() => {
+    if (!toast.classList.contains("is-visible")) toast.hidden = true;
+  }, 320);
 }
 
 function readDiscoveredSoundmarkIds() {

@@ -87,7 +87,7 @@ button {
 .fullscreen-toggle {
   position: absolute;
   top: clamp(10px, 2.8vh, 18px);
-  right: clamp(10px, 2.8vh, 18px);
+  left: clamp(10px, 2.8vh, 18px);
   z-index: 8;
   display: none;
   min-height: 34px;
@@ -126,6 +126,41 @@ button {
 }
 
 .fullscreen-toggle.is-denied {
+  border-color: rgba(255, 218, 116, 0.64);
+  color: #fff3c4;
+}
+
+.orientation-fullscreen-toggle {
+  display: none;
+  min-height: 36px;
+  margin-top: 20px;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 14px;
+  border: 1px solid rgba(226, 244, 248, 0.44);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.032)),
+    rgba(3, 16, 26, 0.24);
+  box-shadow:
+    0 14px 34px rgba(0, 10, 20, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.30);
+  color: #f8fafc;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  text-shadow: 0 1px 8px rgba(0, 18, 28, 0.46);
+  -webkit-backdrop-filter: blur(5px) saturate(1.22);
+  backdrop-filter: blur(5px) saturate(1.22);
+}
+
+.orientation-fullscreen-toggle.is-supported {
+  display: inline-flex;
+}
+
+.orientation-fullscreen-toggle.is-denied {
   border-color: rgba(255, 218, 116, 0.64);
   color: #fff3c4;
 }
@@ -241,6 +276,33 @@ button {
   content: "";
   opacity: 0.64;
   transform: translateX(-50%);
+}
+
+.soundmark-unread {
+  position: absolute;
+  top: 7px;
+  right: 8px;
+  width: 7px;
+  height: 7px;
+  border: 1px solid color-mix(in srgb, var(--soundmark-core), transparent 8%);
+  background:
+    linear-gradient(135deg, color-mix(in srgb, var(--soundmark-core), transparent 12%), var(--soundmark-accent));
+  box-shadow:
+    0 0 8px color-mix(in srgb, var(--soundmark-glow), transparent 10%),
+    0 1px 5px rgba(0, 18, 28, 0.36);
+  opacity: 0.86;
+  pointer-events: none;
+  transform: rotate(45deg) scale(1);
+  transition:
+    opacity 180ms ease,
+    transform 220ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  animation: soundmark-unread 2800ms ease-in-out infinite;
+}
+
+.soundmark-pin.visited .soundmark-unread {
+  opacity: 0;
+  transform: rotate(45deg) scale(0.42);
+  animation: none;
 }
 
 .soundmark-panel {
@@ -470,6 +532,99 @@ button {
 .soundmark-source:hover {
   opacity: 1;
   text-decoration: underline;
+}
+
+.note-progress-toast {
+  --note-progress: 0%;
+  position: absolute;
+  right: calc(14% + clamp(18px, 3vh, 34px));
+  bottom: calc(clamp(18px, 3vh, 34px) + 124px);
+  z-index: 4;
+  display: grid;
+  width: clamp(238px, 24vw, 340px);
+  min-height: 38px;
+  gap: 7px;
+  padding: 9px 12px 10px;
+  border: 1px solid color-mix(in srgb, var(--soundmark-border, rgba(226, 244, 248, 0.34)), transparent 40%);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.092), rgba(255, 255, 255, 0.014)),
+    linear-gradient(170deg, var(--soundmark-bg, rgba(214, 250, 255, 0.075)), var(--soundmark-bg-deep, rgba(16, 76, 96, 0.105))),
+    rgba(3, 16, 26, 0.12);
+  box-shadow:
+    0 16px 42px rgba(0, 12, 22, 0.24),
+    0 0 16px color-mix(in srgb, var(--soundmark-glow, rgba(92, 224, 229, 0.36)), transparent 70%),
+    inset 0 1px 0 rgba(255, 255, 255, 0.32);
+  color: var(--soundmark-ink, #f8fafc);
+  pointer-events: none;
+  text-shadow: 0 1px 8px rgba(0, 18, 28, 0.36);
+  -webkit-backdrop-filter: blur(5px) saturate(1.22);
+  backdrop-filter: blur(5px) saturate(1.22);
+  opacity: 0;
+  transform: translate3d(0, 10px, 0) scale(0.985);
+  transform-origin: 100% 100%;
+  transition:
+    background 520ms ease,
+    border-color 520ms ease,
+    box-shadow 520ms ease,
+    opacity 260ms ease,
+    transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.note-progress-toast.is-visible {
+  opacity: 0.96;
+  transform: translate3d(0, 0, 0) scale(1);
+}
+
+.note-progress-toast[hidden] {
+  display: none;
+}
+
+.dock-collapsed .note-progress-toast {
+  bottom: calc(clamp(18px, 3vh, 34px) + 90px);
+}
+
+.note-progress-copy {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  line-height: 1;
+}
+
+.note-progress-copy span {
+  color: var(--soundmark-muted, #cae7ea);
+  white-space: nowrap;
+}
+
+.note-progress-copy b {
+  color: var(--soundmark-ink, #ffffff);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+}
+
+.note-progress-track {
+  position: relative;
+  height: 3px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--soundmark-border, rgba(202, 231, 234, 0.34)), transparent 70%);
+}
+
+#note-progress-bar {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--note-progress);
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--soundmark-accent, #57d7cf), rgba(255, 255, 255, 0.92));
+  box-shadow:
+    0 0 9px color-mix(in srgb, var(--soundmark-glow, rgba(87, 215, 207, 0.62)), transparent 45%);
+  transition: width 520ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
 .lyric-guide {
@@ -1521,6 +1676,19 @@ button {
   }
 }
 
+@keyframes soundmark-unread {
+  0%,
+  100% {
+    opacity: 0.58;
+    transform: rotate(45deg) scale(0.86);
+  }
+
+  46% {
+    opacity: 0.96;
+    transform: rotate(45deg) scale(1.08);
+  }
+}
+
 @keyframes soundmark-float {
   0%,
   100% {
@@ -1571,6 +1739,10 @@ button {
 }
 
 @media (max-width: 1100px) {
+  .note-progress-toast {
+    right: calc(6% + 14px);
+  }
+
   .control-dock {
     width: min(82%, calc(100% - 28px));
     min-width: 0;
@@ -1652,6 +1824,11 @@ button {
     min-height: 30px;
     padding: 6px 8px;
     font-size: 11px;
+  }
+
+  .note-progress-toast {
+    right: calc(6% + 14px);
+    width: clamp(220px, 32vw, 300px);
   }
 
   .guide-line {
@@ -1740,6 +1917,18 @@ button {
 
   .guide-line:nth-child(2) {
     margin-top: 24px;
+  }
+
+  .note-progress-toast {
+    right: 12px;
+    bottom: calc(clamp(18px, 3vh, 34px) + 112px);
+    width: min(280px, 42vw);
+    min-height: 34px;
+    padding: 8px 10px 9px;
+  }
+
+  .dock-collapsed .note-progress-toast {
+    bottom: calc(clamp(18px, 3vh, 34px) + 80px);
   }
 
   .control-dock {
@@ -1996,6 +2185,27 @@ button {
     min-height: 24px;
     padding: 4px 8px;
     font-size: 9px;
+  }
+
+  .note-progress-toast {
+    right: 12px;
+    bottom: 102px;
+    width: min(260px, 40vw);
+    min-height: 32px;
+    gap: 5px;
+    padding: 7px 9px 8px;
+  }
+
+  .dock-collapsed .note-progress-toast {
+    bottom: 82px;
+  }
+
+  .note-progress-copy {
+    font-size: 10px;
+  }
+
+  .note-progress-copy b {
+    font-size: 11px;
   }
 
   .control-dock {

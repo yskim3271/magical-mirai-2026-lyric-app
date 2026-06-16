@@ -38,6 +38,16 @@
       </div>
     </aside>
 
+    <div id="note-progress-toast" class="note-progress-toast" aria-live="polite" aria-atomic="true" hidden>
+      <div class="note-progress-copy">
+        <span>SONARE NOTES</span>
+        <b id="note-progress-count">0/24</b>
+      </div>
+      <div class="note-progress-track" aria-hidden="true">
+        <div id="note-progress-bar"></div>
+      </div>
+    </div>
+
     <section class="control-dock" id="control-dock" aria-label="music player controls">
       <button
         class="dock-toggle"
@@ -125,6 +135,16 @@
   <aside class="orientation-lock" aria-label="landscape orientation required">
     <strong>画面を横向きにしてください</strong>
     <span>Please rotate your device to landscape.</span>
+    <button
+      id="btn-orientation-fullscreen"
+      class="orientation-fullscreen-toggle"
+      type="button"
+      aria-label="Enter fullscreen"
+      aria-pressed="false"
+      hidden
+    >
+      全画面
+    </button>
   </aside>
 
   <div id="media"></div>
