@@ -40,8 +40,20 @@ button {
   box-shadow: 0 0 80px rgba(0, 0, 0, 0.38);
 }
 
+#app:fullscreen {
+  display: block;
+  width: min(100vw, calc(100vh * var(--stage-aspect)));
+  height: min(100vh, calc(100vw / var(--stage-aspect)));
+  margin: auto;
+}
+
 @supports (height: 100dvh) {
   #app {
+    width: min(100dvw, calc(100dvh * var(--stage-aspect)));
+    height: min(100dvh, calc(100dvw / var(--stage-aspect)));
+  }
+
+  #app:fullscreen {
     width: min(100dvw, calc(100dvh * var(--stage-aspect)));
     height: min(100dvh, calc(100dvw / var(--stage-aspect)));
   }
@@ -70,6 +82,62 @@ button {
 #lyric-effects {
   z-index: 2;
   pointer-events: none;
+}
+
+.fullscreen-toggle {
+  position: absolute;
+  top: clamp(10px, 2.8vh, 18px);
+  right: clamp(10px, 2.8vh, 18px);
+  z-index: 8;
+  display: none;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  padding: 7px 12px;
+  border: 1px solid color-mix(in srgb, var(--soundmark-border, rgba(226, 244, 248, 0.42)), transparent 32%);
+  border-radius: 8px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.026)),
+    rgba(3, 16, 26, 0.18);
+  box-shadow:
+    0 12px 34px rgba(0, 12, 22, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.34);
+  color: var(--soundmark-ink, #f8fafc);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 800;
+  line-height: 1;
+  letter-spacing: 0.04em;
+  opacity: 0.82;
+  text-shadow: 0 1px 8px rgba(0, 18, 28, 0.46);
+  -webkit-backdrop-filter: blur(5px) saturate(1.22);
+  backdrop-filter: blur(5px) saturate(1.22);
+  transition:
+    border-color 160ms ease,
+    background 160ms ease,
+    opacity 160ms ease,
+    transform 160ms ease;
+}
+
+.fullscreen-toggle:hover {
+  border-color: color-mix(in srgb, var(--soundmark-accent, #57d7cf), transparent 24%);
+  opacity: 1;
+  transform: translateY(-1px);
+}
+
+.fullscreen-toggle.is-denied {
+  border-color: rgba(255, 218, 116, 0.64);
+  color: #fff3c4;
+}
+
+@media (hover: none) and (pointer: coarse) and (max-width: 920px) {
+  .fullscreen-toggle.is-supported {
+    display: inline-flex;
+  }
+
+  #app.is-fullscreen .fullscreen-toggle {
+    opacity: 0.54;
+  }
 }
 
 .soundmark-layer {
@@ -163,6 +231,10 @@ button {
 }
 
 .soundmark-panel {
+  --soundmark-panel-top: clamp(70px, 15vh, 150px);
+  --soundmark-panel-padding: clamp(24px, 3vw, 38px);
+  --soundmark-panel-bottom-safe: calc(110px + clamp(18px, 3vh, 34px) + 24px);
+  --soundmark-panel-max: min(560px, calc(100% - var(--soundmark-panel-top) - var(--soundmark-panel-bottom-safe)));
   --soundmark-bg: rgba(214, 250, 255, 0.075);
   --soundmark-bg-deep: rgba(16, 76, 96, 0.105);
   --soundmark-border: rgba(236, 255, 255, 0.72);
@@ -172,18 +244,16 @@ button {
   --soundmark-glow: rgba(92, 224, 229, 0.36);
   --soundmark-caustic: rgba(255, 255, 255, 0.26);
   position: absolute;
-  top: clamp(70px, 15vh, 150px);
+  top: var(--soundmark-panel-top);
   right: clamp(20px, 4vw, 58px);
   z-index: 5;
+  display: flex;
   width: clamp(310px, 27vw, 430px);
-  max-height: min(62vh, 560px);
-  overflow-x: hidden;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  scrollbar-color: color-mix(in srgb, var(--soundmark-border), transparent 34%) transparent;
-  scrollbar-width: thin;
+  max-height: var(--soundmark-panel-max);
+  flex-direction: column;
+  overflow: hidden;
   isolation: isolate;
-  padding: clamp(24px, 3vw, 38px);
+  padding: var(--soundmark-panel-padding);
   border: 1px solid var(--soundmark-border);
   border-radius: 8px;
   background:
@@ -215,15 +285,25 @@ button {
     transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.soundmark-panel::-webkit-scrollbar {
+.soundmark-content {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: color-mix(in srgb, var(--soundmark-border), transparent 34%) transparent;
+  scrollbar-width: thin;
+}
+
+.soundmark-content::-webkit-scrollbar {
   width: 5px;
 }
 
-.soundmark-panel::-webkit-scrollbar-track {
+.soundmark-content::-webkit-scrollbar-track {
   background: transparent;
 }
 
-.soundmark-panel::-webkit-scrollbar-thumb {
+.soundmark-content::-webkit-scrollbar-thumb {
   border-radius: 999px;
   background: color-mix(in srgb, var(--soundmark-border), transparent 34%);
 }
@@ -1500,11 +1580,14 @@ button {
   }
 
   .soundmark-panel {
-    top: clamp(44px, 11vh, 78px);
+    --soundmark-panel-top: clamp(44px, 11vh, 78px);
+    --soundmark-panel-padding: 20px;
+    --soundmark-panel-max: min(560px, calc(100% - var(--soundmark-panel-top) - var(--soundmark-panel-bottom-safe)));
+    top: var(--soundmark-panel-top);
     right: clamp(14px, 3vw, 28px);
     width: clamp(260px, 34vw, 320px);
-    max-height: 60vh;
-    padding: 20px;
+    max-height: var(--soundmark-panel-max);
+    padding: var(--soundmark-panel-padding);
   }
 
   .soundmark-close {
@@ -1618,7 +1701,8 @@ button {
   .soundmark-panel {
     right: 12px;
     width: min(46vw, 260px);
-    padding: 16px;
+    --soundmark-panel-padding: 16px;
+    padding: var(--soundmark-panel-padding);
   }
 
   .lyric-guide-lines {
@@ -1721,9 +1805,13 @@ button {
   }
 
   .soundmark-panel {
-    top: clamp(34px, 9vh, 58px);
-    padding: 18px;
-    max-height: 58vh;
+    --soundmark-panel-top: clamp(34px, 9vh, 58px);
+    --soundmark-panel-padding: 18px;
+    --soundmark-panel-bottom-safe: calc(94px + clamp(12px, 2.6vh, 24px) + 18px);
+    --soundmark-panel-max: min(560px, calc(100% - var(--soundmark-panel-top) - var(--soundmark-panel-bottom-safe)));
+    top: var(--soundmark-panel-top);
+    max-height: var(--soundmark-panel-max);
+    padding: var(--soundmark-panel-padding);
   }
 
   .soundmark-close {
@@ -1845,11 +1933,15 @@ button {
   }
 
   .soundmark-panel {
-    top: 28px;
+    --soundmark-panel-top: 28px;
+    --soundmark-panel-padding: 14px;
+    --soundmark-panel-bottom-safe: 110px;
+    --soundmark-panel-max: min(560px, calc(100% - var(--soundmark-panel-top) - var(--soundmark-panel-bottom-safe)));
+    top: var(--soundmark-panel-top);
     right: 12px;
     width: min(38vw, 250px);
-    max-height: 56vh;
-    padding: 14px;
+    max-height: var(--soundmark-panel-max);
+    padding: var(--soundmark-panel-padding);
   }
 
   .soundmark-close {

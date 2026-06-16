@@ -186,6 +186,7 @@ initializeSoundmarkDebugMode();
 initializeSoundmarkPlacementOverlay();
 initializeToriiExclusionZoneOverlay();
 initializeToriiReflectionOverlay();
+initializeFullscreenControl();
 setTransportEnabled(false);
 
 player.addListener({
@@ -323,6 +324,59 @@ function bindControls() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") setSongMenuOpen(false);
   });
+}
+
+function initializeFullscreenControl() {
+  const button = $("#btn-fullscreen");
+  const app = $("#app");
+  if (!button || !app) return;
+
+  const fullscreenAvailable = Boolean(document.fullscreenEnabled && app.requestFullscreen);
+  if (!fullscreenAvailable) {
+    button.hidden = true;
+    return;
+  }
+
+  button.hidden = false;
+  button.classList.add("is-supported");
+  updateFullscreenControl();
+
+  button.addEventListener("click", async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen();
+      } else {
+        await app.requestFullscreen({ navigationUI: "hide" });
+        try {
+          await screen.orientation?.lock?.("landscape");
+        } catch {
+          // Orientation lock support varies by browser and is optional.
+        }
+      }
+    } catch {
+      button.classList.add("is-denied");
+      button.textContent = "全画面不可";
+      setTimeout(updateFullscreenControl, 1400);
+      return;
+    }
+
+    updateFullscreenControl();
+  });
+
+  document.addEventListener("fullscreenchange", updateFullscreenControl);
+}
+
+function updateFullscreenControl() {
+  const button = $("#btn-fullscreen");
+  const app = $("#app");
+  if (!button || !app || button.hidden) return;
+
+  const active = document.fullscreenElement === app;
+  app.classList.toggle("is-fullscreen", active);
+  button.classList.remove("is-denied");
+  button.textContent = active ? "退出" : "全画面";
+  button.setAttribute("aria-label", active ? "Exit fullscreen" : "Enter fullscreen");
+  button.setAttribute("aria-pressed", String(active));
 }
 
 function togglePlayback() {
