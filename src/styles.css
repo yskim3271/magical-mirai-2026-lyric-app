@@ -177,7 +177,11 @@ button {
   z-index: 5;
   width: clamp(310px, 27vw, 430px);
   max-height: min(62vh, 560px);
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-color: color-mix(in srgb, var(--soundmark-border), transparent 34%) transparent;
+  scrollbar-width: thin;
   isolation: isolate;
   padding: clamp(24px, 3vw, 38px);
   border: 1px solid var(--soundmark-border);
@@ -209,6 +213,19 @@ button {
     color 900ms ease,
     opacity 260ms ease,
     transform 320ms cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.soundmark-panel::-webkit-scrollbar {
+  width: 5px;
+}
+
+.soundmark-panel::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.soundmark-panel::-webkit-scrollbar-thumb {
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--soundmark-border), transparent 34%);
 }
 
 .soundmark-panel::before,
@@ -297,7 +314,7 @@ button {
   border-bottom: 1px solid color-mix(in srgb, var(--soundmark-border), transparent 46%);
   color: var(--soundmark-ink);
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "YuMincho", "Noto Serif JP", serif;
-  font-size: clamp(26px, 2.8vw, 42px);
+  font-size: clamp(26px, 4.6vh, 42px);
   font-weight: 600;
   line-height: 1.2;
   letter-spacing: 0;
@@ -309,7 +326,7 @@ button {
 .soundmark-body {
   margin: 0 0 18px;
   color: var(--soundmark-ink);
-  font-size: clamp(13px, 1.15vw, 16px);
+  font-size: clamp(13px, 1.8vh, 16px);
   font-weight: 500;
   line-height: 1.86;
   text-shadow: 0 1px 10px rgba(0, 20, 30, 0.22);
@@ -342,7 +359,7 @@ button {
   border-top: 1px solid color-mix(in srgb, var(--soundmark-border), transparent 58%);
   color: var(--soundmark-muted);
   font-family: "Yu Mincho", "Hiragino Mincho ProN", "YuMincho", "Noto Serif JP", serif;
-  font-size: clamp(13px, 1.05vw, 15px);
+  font-size: clamp(13px, 1.7vh, 15px);
   line-height: 1.8;
 }
 
@@ -413,7 +430,7 @@ button {
   display: block;
   max-height: min(44vh, 360px);
   overflow: hidden;
-  font-size: 22px;
+  font-size: clamp(18px, 3.1vh, 22px);
   font-weight: 600;
   line-height: 1.34;
   letter-spacing: 0;
@@ -1301,7 +1318,7 @@ button {
   --drop-end-scale: 1.18;
   position: absolute;
   color: rgba(255, 255, 255, 0.94);
-  font-size: clamp(16px, 2.2vw, 34px);
+  font-size: clamp(16px, 3.8vh, 34px);
   font-weight: 800;
   line-height: 1;
   letter-spacing: 0;
@@ -1439,14 +1456,39 @@ button {
 
 .orientation-lock strong {
   margin-bottom: 10px;
-  font-size: clamp(22px, 7vw, 34px);
+  font-size: clamp(22px, 4vh, 34px);
   font-weight: 800;
   letter-spacing: 0;
 }
 
 .orientation-lock span {
   color: #c8eef2;
-  font-size: clamp(13px, 3.8vw, 17px);
+  font-size: clamp(13px, 2vh, 17px);
+}
+
+@media (max-width: 1100px) {
+  .control-dock {
+    width: min(82%, calc(100% - 28px));
+    min-width: 0;
+  }
+
+  .player-rail {
+    grid-template-columns: minmax(164px, 1fr) auto minmax(150px, 1fr);
+    gap: 10px;
+  }
+
+  .track-selector {
+    width: min(232px, 28vw);
+  }
+
+  .player-side {
+    gap: 12px;
+  }
+
+  .volume-control {
+    width: min(128px, 14vw);
+    grid-template-columns: auto minmax(44px, 1fr) 34px;
+  }
 }
 
 @media (max-width: 920px) {
@@ -1480,7 +1522,7 @@ button {
   .soundmark-panel h2 {
     margin-bottom: 12px;
     padding-bottom: 12px;
-    font-size: clamp(22px, 3vw, 28px);
+    font-size: clamp(21px, 5.6vh, 28px);
   }
 
   .soundmark-body,
@@ -1507,7 +1549,7 @@ button {
 
   .guide-line {
     max-height: 38vh;
-    font-size: 22px;
+    font-size: clamp(18px, 3.1vh, 22px);
   }
 
   .control-dock {
@@ -1585,7 +1627,7 @@ button {
 
   .guide-line {
     max-height: 32vh;
-    font-size: 22px;
+    font-size: clamp(17px, 3.1vh, 20px);
   }
 
   .guide-line:nth-child(2) {
@@ -1655,6 +1697,320 @@ button {
     width: min(330px, 82vw);
     max-height: 132px;
     overflow: auto;
+  }
+}
+
+@media (max-height: 640px) {
+  .lyric-guide {
+    top: clamp(24px, 6vh, 40px);
+    left: clamp(30px, 7vw, 60px);
+    max-height: 34vh;
+  }
+
+  .lyric-guide-lines {
+    gap: clamp(8px, 1.4vw, 14px);
+  }
+
+  .guide-line {
+    max-height: 34vh;
+    font-size: clamp(17px, 4.4vh, 20px);
+  }
+
+  .guide-line:nth-child(2) {
+    margin-top: clamp(20px, 5vh, 32px);
+  }
+
+  .soundmark-panel {
+    top: clamp(34px, 9vh, 58px);
+    padding: 18px;
+    max-height: 58vh;
+  }
+
+  .soundmark-close {
+    top: 10px;
+    right: 10px;
+    width: 30px;
+    height: 30px;
+    font-size: 26px;
+  }
+
+  .soundmark-kicker {
+    margin-bottom: 10px;
+    font-size: 10px;
+  }
+
+  .soundmark-panel h2 {
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    font-size: clamp(20px, 5.4vh, 26px);
+  }
+
+  .soundmark-body,
+  .soundmark-caption {
+    font-size: 12px;
+    line-height: 1.58;
+  }
+
+  .control-dock {
+    bottom: clamp(12px, 2.6vh, 24px);
+    height: 94px;
+    padding: 30px 20px 13px;
+  }
+
+  .control-dock.collapsed {
+    bottom: calc(clamp(12px, 2.6vh, 24px) + 9px);
+  }
+
+  .player-rail {
+    min-height: 48px;
+    gap: 10px;
+  }
+
+  .track-selector {
+    min-height: 36px;
+    padding: 6px 12px 6px 14px;
+  }
+
+  .transport {
+    gap: 6px;
+  }
+
+  .transport-button {
+    width: 32px;
+    height: 32px;
+    font-size: 16px;
+  }
+
+  .transport-button.primary {
+    width: 40px;
+    height: 40px;
+    font-size: 25px;
+  }
+
+  .player-side {
+    gap: 10px;
+  }
+
+  .time-row {
+    min-width: 82px;
+    font-size: 12px;
+  }
+
+  .volume-control {
+    width: min(126px, 17vw);
+    grid-template-columns: auto minmax(44px, 1fr) 34px;
+    font-size: 10px;
+  }
+
+  .progress {
+    top: -21px;
+    height: 16px;
+  }
+
+  .progress::before,
+  #progress-bar {
+    top: 7px;
+  }
+
+  .song-strip {
+    bottom: calc(100% + 12px);
+    max-height: 160px;
+    overflow: auto;
+  }
+
+  .debug-soundmarks .soundmark-debug-tools {
+    bottom: calc(clamp(12px, 2.6vh, 24px) + 94px);
+  }
+}
+
+@media (max-height: 430px) {
+  .lyric-guide {
+    top: 24px;
+    left: 28px;
+    max-width: 34vw;
+    max-height: 30vh;
+  }
+
+  .lyric-guide-lines {
+    gap: 8px;
+  }
+
+  .guide-line {
+    max-height: 30vh;
+    font-size: 17px;
+  }
+
+  .guide-line:nth-child(2) {
+    margin-top: 20px;
+  }
+
+  .soundmark-panel {
+    top: 28px;
+    right: 12px;
+    width: min(38vw, 250px);
+    max-height: 56vh;
+    padding: 14px;
+  }
+
+  .soundmark-close {
+    width: 28px;
+    height: 28px;
+    font-size: 24px;
+  }
+
+  .soundmark-kicker {
+    margin: 0 32px 8px 0;
+    font-size: 9px;
+  }
+
+  .soundmark-panel h2 {
+    margin-bottom: 8px;
+    padding-bottom: 8px;
+    font-size: 20px;
+  }
+
+  .soundmark-body,
+  .soundmark-caption {
+    font-size: 11px;
+    line-height: 1.5;
+  }
+
+  .soundmark-tags {
+    gap: 5px;
+    margin-bottom: 12px;
+  }
+
+  .soundmark-tag {
+    min-height: 24px;
+    padding: 4px 8px;
+    font-size: 9px;
+  }
+
+  .control-dock {
+    bottom: 12px;
+    height: 84px;
+    padding: 26px 14px 10px;
+  }
+
+  .control-dock.collapsed {
+    bottom: 16px;
+  }
+
+  .dock-toggle {
+    right: -24px;
+    height: 64px;
+  }
+
+  .control-dock.collapsed .dock-toggle {
+    height: 64px;
+  }
+
+  .player-rail {
+    min-height: 42px;
+    grid-template-columns: minmax(128px, 1fr) auto minmax(118px, 1fr);
+    gap: 7px;
+  }
+
+  .track-selector {
+    width: min(198px, 31vw);
+    min-height: 32px;
+    padding: 5px 9px 5px 10px;
+  }
+
+  .track-title {
+    font-size: 12px;
+  }
+
+  .track-artist {
+    font-size: 9px;
+  }
+
+  .select-chevron {
+    width: 22px;
+    height: 22px;
+  }
+
+  .transport {
+    gap: 4px;
+  }
+
+  .transport-button {
+    width: 28px;
+    height: 28px;
+    font-size: 14px;
+  }
+
+  .transport-button.primary {
+    width: 35px;
+    height: 35px;
+    font-size: 22px;
+  }
+
+  .player-side {
+    gap: 6px;
+  }
+
+  .time-row {
+    min-width: 70px;
+    font-size: 11px;
+  }
+
+  .volume-control {
+    width: min(76px, 15vw);
+    grid-template-columns: auto minmax(34px, 1fr);
+  }
+
+  .volume-control output {
+    display: none;
+  }
+
+  .progress {
+    top: -18px;
+    height: 14px;
+  }
+
+  .progress::before,
+  #progress-bar {
+    top: 6px;
+  }
+
+  #progress-bar::after {
+    width: 9px;
+    height: 9px;
+  }
+
+  .progress-slider {
+    inset: -7px 0;
+  }
+
+  .song-strip {
+    bottom: calc(100% + 10px);
+    width: min(330px, 82vw);
+    max-height: 112px;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 5px;
+    padding: 7px;
+  }
+
+  .song-card {
+    min-height: 42px;
+    padding: 7px 8px;
+  }
+
+  .song-card span {
+    font-size: 9px;
+  }
+
+  .song-card strong {
+    font-size: 12px;
+  }
+
+  .song-card em {
+    font-size: 10px;
+  }
+
+  .debug-soundmarks .soundmark-debug-tools {
+    bottom: 104px;
   }
 }
 
