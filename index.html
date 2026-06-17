@@ -7,6 +7,33 @@
   <link rel="stylesheet" href="/src/styles.css" />
 </head>
 <body>
+  <section
+    id="app-loading"
+    class="app-loading"
+    role="status"
+    aria-live="polite"
+    aria-label="Loading lake scene"
+  >
+    <p class="loading-poem" aria-hidden="true">
+      <span>湖のソナーレ</span>
+      <span>ひとつの波紋が</span>
+      <span>六つの歌へ</span>
+      <span>静かにひらいていく</span>
+    </p>
+    <div class="loading-meter">
+      <div
+        class="loading-line"
+        role="progressbar"
+        aria-valuemin="0"
+        aria-valuemax="100"
+        aria-valuenow="0"
+      >
+        <span id="loading-progress-bar"></span>
+      </div>
+      <p id="loading-progress-label">湖面をひらいています</p>
+    </div>
+  </section>
+
   <main id="app">
     <div id="lake-scene" aria-hidden="true"></div>
     <div id="lyric-effects" aria-hidden="true"></div>

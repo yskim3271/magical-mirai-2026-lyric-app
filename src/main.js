@@ -71,6 +71,8 @@ const ONBOARDING_STEP_COUNT = 6;
 const ONBOARDING_PREVIEW_PROGRESS = 0.58;
 const ONBOARDING_PREVIEW_SOUNDMARK_COUNT = 5;
 const ONBOARDING_PREVIEW_NOTE_COUNT = 3;
+const LOADING_MIN_VISIBLE_MS = 700;
+const LOADING_FADE_MS = 520;
 const SCENE_TRANSITION_IN_MS = 180;
 const SCENE_TRANSITION_OUT_MS = 1100;
 const SCENE_PROGRESS_TWEEN_MS = 1000;
@@ -184,6 +186,8 @@ const SOUNDMARK_PALETTES = {
 
 const lake = createLakeScene($("#lake-scene"));
 const player = createTextAlivePlayer($("#media"));
+
+initializeLoadingScreen();
 
 let activeSong = null;
 let phrases = [];
@@ -342,6 +346,39 @@ player.addListener({
     updatePlayPauseButton();
   },
 });
+
+function initializeLoadingScreen() {
+  const loading = $("#app-loading");
+  if (!loading || typeof lake.onAssetProgress !== "function" || typeof lake.whenAssetsReady !== "function") return;
+
+  const progressLine = loading.querySelector(".loading-line");
+  const progressBar = $("#loading-progress-bar");
+  const minVisibleUntil = performance.now() + LOADING_MIN_VISIBLE_MS;
+
+  const setProgress = (value) => {
+    const progress = clamp(value, 0, 1);
+    const percent = Math.round(progress * 100);
+    loading.style.setProperty("--loading-progress", `${percent}%`);
+    progressLine?.setAttribute("aria-valuenow", String(percent));
+    if (progressBar) progressBar.style.width = `${percent}%`;
+  };
+
+  const unsubscribe = lake.onAssetProgress(({ progress }) => {
+    setProgress(progress);
+  });
+
+  lake.whenAssetsReady().then(() => {
+    setProgress(1);
+    const delay = Math.max(0, minVisibleUntil - performance.now());
+    window.setTimeout(() => {
+      unsubscribe();
+      loading.classList.add("is-hidden");
+      window.setTimeout(() => {
+        loading.hidden = true;
+      }, LOADING_FADE_MS);
+    }, delay);
+  });
+}
 
 function renderSongList() {
   const list = $("#song-list");

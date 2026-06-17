@@ -38,6 +38,87 @@ button {
   font: inherit;
 }
 
+.app-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  background: #071b28;
+  color: rgba(244, 250, 252, 0.92);
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity 520ms ease,
+    visibility 520ms ease;
+}
+
+.app-loading.is-hidden {
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.loading-poem {
+  position: absolute;
+  top: clamp(92px, 18vh, 210px);
+  right: clamp(90px, 14vw, 220px);
+  display: flex;
+  flex-direction: row-reverse;
+  gap: clamp(22px, 3vw, 46px);
+  margin: 0;
+  color: rgba(245, 250, 252, 0.88);
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif;
+  font-size: clamp(24px, 2.4vw, 42px);
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.74;
+  text-shadow:
+    0 0 18px rgba(116, 179, 204, 0.18),
+    0 1px 14px rgba(0, 8, 16, 0.44);
+  writing-mode: vertical-rl;
+}
+
+.loading-meter {
+  position: absolute;
+  left: 50%;
+  bottom: clamp(58px, 9vh, 110px);
+  width: min(34vw, 600px);
+  min-width: 320px;
+  transform: translateX(-50%);
+}
+
+.loading-line {
+  position: relative;
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  background: rgba(211, 235, 243, 0.18);
+}
+
+.loading-line span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: var(--loading-progress, 0%);
+  min-width: 12px;
+  background: rgba(248, 252, 253, 0.82);
+  box-shadow: 0 0 12px rgba(174, 229, 244, 0.22);
+  transition: width 220ms ease;
+}
+
+#loading-progress-label {
+  margin: 22px 0 0;
+  color: rgba(235, 244, 247, 0.76);
+  font-family: "Yu Mincho", "Hiragino Mincho ProN", "Noto Serif JP", "Times New Roman", serif;
+  font-size: clamp(15px, 1.25vw, 20px);
+  font-weight: 400;
+  letter-spacing: 0.18em;
+  line-height: 1.4;
+  text-align: center;
+  text-indent: 0.18em;
+}
+
 #app {
   position: relative;
   width: min(100vw, calc(100vh * var(--stage-aspect)));
@@ -63,6 +144,24 @@ button {
   #app:fullscreen {
     width: min(100dvw, calc(100dvh * var(--stage-aspect)));
     height: min(100dvh, calc(100dvw / var(--stage-aspect)));
+  }
+}
+
+@media (max-width: 760px) {
+  .loading-poem {
+    top: clamp(56px, 14vh, 120px);
+    right: clamp(32px, 10vw, 84px);
+    gap: clamp(16px, 5vw, 28px);
+    font-size: clamp(22px, 8vw, 34px);
+  }
+
+  .loading-meter {
+    width: min(58vw, 420px);
+    min-width: 220px;
+  }
+
+  #loading-progress-label {
+    font-size: 14px;
   }
 }
 

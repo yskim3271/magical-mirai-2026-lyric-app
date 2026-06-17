@@ -685,6 +685,13 @@ class LakeScene {
     this.targetChorus = 0;
     this.beatEnergy = 0;
     this.targetBeatEnergy = 0;
+    this.assetTotal = BACKDROP_TEXTURES.length + CLOUD_TEXTURES.length + TORII_TEXTURES.length;
+    this.assetLoaded = 0;
+    this.assetReady = false;
+    this.assetProgressListeners = new Set();
+    this.assetsReadyPromise = new Promise((resolve) => {
+      this.resolveAssetsReady = resolve;
+    });
     const fallbackPixel = new Uint8Array([120, 215, 229, 255]);
     const fallbackTexture = new THREE.DataTexture(fallbackPixel, 1, 1);
     fallbackTexture.needsUpdate = true;
@@ -772,6 +779,9 @@ class LakeScene {
         this.uniforms.uBackdropReady.value = loaded === BACKDROP_TEXTURES.length
           ? 1
           : loaded / BACKDROP_TEXTURES.length;
+        this.markAssetLoaded();
+      }, undefined, () => {
+        this.markAssetLoaded();
       });
     }
   }
@@ -791,6 +801,9 @@ class LakeScene {
         this.uniforms.uCloudReady.value = loaded === CLOUD_TEXTURES.length
           ? 1
           : loaded / CLOUD_TEXTURES.length;
+        this.markAssetLoaded();
+      }, undefined, () => {
+        this.markAssetLoaded();
       });
     }
   }
@@ -809,8 +822,47 @@ class LakeScene {
         this.uniforms[uniformName].value = texture;
         loaded += 1;
         this.uniforms.uToriiReady.value = loaded === TORII_TEXTURES.length ? 1 : 0;
+        this.markAssetLoaded();
+      }, undefined, () => {
+        this.markAssetLoaded();
       });
     }
+  }
+
+  markAssetLoaded() {
+    if (this.assetLoaded >= this.assetTotal) return;
+    this.assetLoaded += 1;
+    if (this.assetLoaded >= this.assetTotal) {
+      this.assetLoaded = this.assetTotal;
+      this.assetReady = true;
+    }
+
+    const state = this.getAssetLoadingState();
+    this.assetProgressListeners.forEach((listener) => listener(state));
+    if (state.ready) this.resolveAssetsReady(state);
+  }
+
+  getAssetLoadingState() {
+    const total = Math.max(this.assetTotal, 1);
+    return {
+      loaded: this.assetLoaded,
+      total: this.assetTotal,
+      progress: THREE.MathUtils.clamp(this.assetLoaded / total, 0, 1),
+      ready: this.assetReady,
+    };
+  }
+
+  onAssetProgress(listener) {
+    if (typeof listener !== "function") return () => {};
+    this.assetProgressListeners.add(listener);
+    listener(this.getAssetLoadingState());
+    return () => {
+      this.assetProgressListeners.delete(listener);
+    };
+  }
+
+  whenAssetsReady() {
+    return this.assetsReadyPromise;
   }
 
   setAudioState({ amplitude = 0, chorus = false } = {}) {
