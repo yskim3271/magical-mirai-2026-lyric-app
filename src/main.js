@@ -9,6 +9,14 @@ const $ = (selector) => document.querySelector(selector);
 const DOCK_COLLAPSED_KEY = "sonareLakeDockCollapsed";
 const VOLUME_KEY = "sonareLakeVolume";
 const SOUNDMARK_COLLECTION_KEY = "sonareLakeSoundmarks";
+const LOCALE_KEY = "sonareLakeLocale";
+const SUPPORTED_LOCALES = ["ja", "ko", "en", "zh-Hans"];
+const LOCALE_LABELS = {
+  ja: { compact: "JA", name: "日本語" },
+  ko: { compact: "KO", name: "한국어" },
+  en: { compact: "EN", name: "English" },
+  "zh-Hans": { compact: "简", name: "简体中文" },
+};
 const LYRIC_SPAWN_LEAD_MS = 80;
 const LYRIC_BASE_DROP_MS = 2200;
 const LYRIC_FADE_OUT_MS = 520;
@@ -210,6 +218,7 @@ let debugSoundmarkProgress = DEBUG_SOUNDMARK_DEFAULT_PROGRESS;
 let debugPlaybackActive = false;
 let playbackActive = false;
 let isProgressScrubbing = false;
+let currentLocale = readPreferredLocale();
 let pendingSeekPosition = null;
 let pendingSeekStartedAt = 0;
 let songLoadPending = false;
@@ -222,6 +231,7 @@ let onboardingLeaderFrame = null;
 
 renderSongList();
 bindControls();
+initializeLocaleControls();
 restoreDockState();
 initializeVolumeControl();
 initializeSoundmarks();
@@ -377,6 +387,109 @@ function bindControls() {
   document.addEventListener("keydown", (event) => {
     if (event.key === "Escape") setSongMenuOpen(false);
   });
+}
+
+function initializeLocaleControls() {
+  document.querySelectorAll("[data-locale-option]").forEach((button) => {
+    button.addEventListener("click", (event) => {
+      event.stopPropagation();
+      setLocale(button.dataset.localeOption);
+      setLocaleMenuOpen(false);
+    });
+  });
+
+  $("#btn-locale-menu")?.addEventListener("click", (event) => {
+    event.stopPropagation();
+    setLocaleMenuOpen($("#locale-menu")?.hidden ?? true);
+  });
+
+  document.addEventListener("click", (event) => {
+    if (!event.target.closest(".locale-picker")) setLocaleMenuOpen(false);
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") setLocaleMenuOpen(false);
+  });
+
+  setLocale(currentLocale, { persist: false });
+}
+
+function readPreferredLocale() {
+  try {
+    const storedLocale = normalizeLocale(localStorage.getItem(LOCALE_KEY));
+    if (storedLocale) return storedLocale;
+  } catch {
+    // Local storage is optional.
+  }
+
+  const browserLocales = typeof navigator !== "undefined"
+    ? [navigator.language, ...(navigator.languages ?? [])]
+    : [];
+  for (const locale of browserLocales) {
+    const normalized = normalizeLocale(locale);
+    if (normalized) return normalized;
+  }
+
+  return "ja";
+}
+
+function normalizeLocale(locale) {
+  if (!locale) return null;
+  const value = String(locale).trim().toLowerCase();
+  if (value === "zh" || value === "zh-cn" || value === "zh-hans" || value.startsWith("zh-hans")) return "zh-Hans";
+  if (value.startsWith("ko")) return "ko";
+  if (value.startsWith("en")) return "en";
+  if (value.startsWith("ja")) return "ja";
+  return SUPPORTED_LOCALES.includes(locale) ? locale : null;
+}
+
+function setLocale(locale, options = {}) {
+  const { persist = true } = options;
+  const normalized = normalizeLocale(locale) ?? "ja";
+  currentLocale = normalized;
+  document.documentElement.lang = normalized;
+  document.documentElement.dataset.locale = normalized;
+
+  if (persist) {
+    try {
+      localStorage.setItem(LOCALE_KEY, normalized);
+    } catch {
+      // Persisting language preference is optional.
+    }
+  }
+
+  syncLocaleControls();
+}
+
+function syncLocaleControls() {
+  const label = LOCALE_LABELS[currentLocale] ?? LOCALE_LABELS.ja;
+  const compactLabel = $("#locale-current-label");
+  if (compactLabel) compactLabel.textContent = label.compact;
+
+  const menuButton = $("#btn-locale-menu");
+  if (menuButton) {
+    menuButton.setAttribute("aria-label", `Language selection: ${label.name}`);
+  }
+
+  document.querySelectorAll("[data-locale-option]").forEach((button) => {
+    const active = normalizeLocale(button.dataset.localeOption) === currentLocale;
+    button.classList.toggle("is-active", active);
+    if (button.getAttribute("role") === "menuitemradio") {
+      button.setAttribute("aria-checked", String(active));
+    } else {
+      button.setAttribute("aria-pressed", String(active));
+    }
+  });
+}
+
+function setLocaleMenuOpen(open) {
+  const menu = $("#locale-menu");
+  const button = $("#btn-locale-menu");
+  if (!menu || !button) return;
+
+  menu.hidden = !open;
+  button.classList.toggle("is-open", open);
+  button.setAttribute("aria-expanded", String(open));
 }
 
 function initializeFullscreenControl() {

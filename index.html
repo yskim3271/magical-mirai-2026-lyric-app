@@ -66,6 +66,12 @@
       </svg>
 
       <div class="onboarding-brand" aria-hidden="true">湖のソナーレ</div>
+      <div class="locale-switcher locale-switcher-onboarding" role="group" aria-label="Language selection">
+        <button class="locale-option" type="button" data-locale-option="ja" aria-pressed="false">日本語</button>
+        <button class="locale-option" type="button" data-locale-option="ko" aria-pressed="false">한국어</button>
+        <button class="locale-option" type="button" data-locale-option="en" aria-pressed="false">EN</button>
+        <button class="locale-option" type="button" data-locale-option="zh-Hans" aria-pressed="false">简中</button>
+      </div>
 
       <article class="onboarding-callout onboarding-callout-guide" data-callout="guide">
         <span class="onboarding-dot" aria-hidden="true"></span>
@@ -183,6 +189,27 @@
               <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" />
               <output id="volume-label" for="volume-slider">100%</output>
             </label>
+            <div class="locale-picker">
+              <button
+                id="btn-locale-menu"
+                class="locale-compact"
+                type="button"
+                aria-label="Language selection"
+                aria-haspopup="true"
+                aria-expanded="false"
+                aria-controls="locale-menu"
+              >
+                <span aria-hidden="true">文</span>
+                <b id="locale-current-label">JA</b>
+                <i aria-hidden="true"></i>
+              </button>
+              <div id="locale-menu" class="locale-menu" role="menu" hidden>
+                <button class="locale-menu-option" type="button" role="menuitemradio" data-locale-option="ja" aria-checked="false">日本語</button>
+                <button class="locale-menu-option" type="button" role="menuitemradio" data-locale-option="ko" aria-checked="false">한국어</button>
+                <button class="locale-menu-option" type="button" role="menuitemradio" data-locale-option="en" aria-checked="false">English</button>
+                <button class="locale-menu-option" type="button" role="menuitemradio" data-locale-option="zh-Hans" aria-checked="false">简体中文</button>
+              </div>
+            </div>
           </div>
         </div>
 
@@ -197,6 +224,12 @@
 
   <aside class="orientation-lock" aria-label="landscape orientation required">
     <div class="orientation-card" role="dialog" aria-labelledby="orientation-title" aria-describedby="orientation-copy">
+      <div class="locale-switcher locale-switcher-orientation" role="group" aria-label="Language selection">
+        <button class="locale-option" type="button" data-locale-option="ja" aria-pressed="false">日本語</button>
+        <button class="locale-option" type="button" data-locale-option="ko" aria-pressed="false">한국어</button>
+        <button class="locale-option" type="button" data-locale-option="en" aria-pressed="false">EN</button>
+        <button class="locale-option" type="button" data-locale-option="zh-Hans" aria-pressed="false">简中</button>
+      </div>
       <div class="orientation-visual" aria-hidden="true">
         <span class="orientation-phone orientation-phone-portrait"></span>
         <span class="orientation-phone orientation-phone-landscape"></span>

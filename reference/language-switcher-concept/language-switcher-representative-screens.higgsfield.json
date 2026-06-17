@@ -1,0 +1,46 @@
+[
+  {
+    "id": "4024ae48-edf9-4be6-90d2-92030018e916",
+    "status": "completed",
+    "display_name": "GPT Image 2",
+    "job_set_type": "gpt_image_2",
+    "result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/hf_20260617_044445_4024ae48-edf9-4be6-90d2-92030018e916.png",
+    "created_at": 1781671485.194302,
+    "params": {
+      "width": 2688,
+      "height": 1520,
+      "prompt": "Create a high-fidelity 16:9 UI concept board for the Japanese lyric web app \"湖のソナーレ\". Use the attached screenshots as exact visual references for the app: realistic lake scene, red torii, vertical lyric guide, liquid-glass onboarding, bottom music player, mobile fullscreen/orientation guide. Preserve this app style and do not redesign the core UI.\n\nThe goal of this concept board is to show where language selection UI appears across representative screens. Show three labeled app states in one polished design board, on a quiet dark neutral background. The board may use subtle Korean labels outside the app mockups: \"첫 화면\", \"세로 안내\", \"메인 화면\".\n\nSTATE 1: First-run onboarding screen, landscape app.\n- Show the existing lake lyric app with onboarding overlay and bottom player.\n- Add a visible language segmented control on the first screen, because language must be selectable before reading onboarding text.\n- Place it near the top-right safe area of the app, above the onboarding content, not covering the vertical lyric guide or right panel.\n- Segments: \"日本語\", \"한국어\", \"EN\", \"简中\".\n- Selected segment: \"한국어\".\n- Style: very thin liquid-glass segmented control, 32-36px height, subtle border, restrained glow, background visible through it.\n\nSTATE 2: Mobile portrait landscape-orientation guide.\n- Show the portrait phone orientation card from the reference mood: blurred lake behind, translucent glass card, rotate phone icon, calm Japanese/Korean app tone.\n- Add the same language segmented control at the top of the glass card, before the title, because this screen can be the first screen on mobile.\n- Segments: \"日本語\", \"한국어\", \"EN\", \"简中\" with \"한국어\" selected.\n- It should feel integrated with the card, not like a browser toolbar.\n\nSTATE 3: Main playback screen, landscape app after onboarding.\n- Show the full lake app with the bottom music player.\n- Add a compact language picker inside the bottom player near the volume/time area: a small glass pill \"文 KO ▾\".\n- Also show its open state as a tiny glass popover above the button with options \"日本語\", \"한국어\", \"English\", \"简体中文\".\n- It must not overlap the progress bar or transport buttons.\n- Keep it subtle: available for the whole UX, but less visually dominant than playback controls.\n\nStyle direction:\n- premium liquid glass UI consistent with the app, translucent frosted panels, cyan-white edge highlights, no opaque boxes\n- calm lake lyric-app atmosphere, restrained glow, Japanese Mincho typography where appropriate\n- precise UI placement; show that the selector is accessible but does not distract\n\nStrict negative instructions:\n- Do not create a marketing landing page.\n- Do not add huge flags, country icons, emojis, or colorful badges.\n- Do not use opaque menus or standard desktop select boxes.\n- Do not cover the torii, vertical lyric guide, or bottom music player controls.\n- Do not move the fullscreen button to the left.\n- Do not replace the app with a generic dashboard.",
+      "medias": [
+        {
+          "data": {
+            "id": "1d68f6d1-52e8-4b53-a453-f6d3248da323",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/1d68f6d1-52e8-4b53-a453-f6d3248da323.png",
+            "type": "media_input"
+          },
+          "role": "image"
+        },
+        {
+          "data": {
+            "id": "ac4bc694-2fde-4128-abf8-50156a7ca255",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/ac4bc694-2fde-4128-abf8-50156a7ca255_resize.jpg",
+            "type": "media_input"
+          },
+          "role": "image"
+        },
+        {
+          "data": {
+            "id": "f736ba8b-cc03-4b6c-848d-9c1d04853bb6",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/f736ba8b-cc03-4b6c-848d-9c1d04853bb6_resize.jpg",
+            "type": "media_input"
+          },
+          "role": "image"
+        }
+      ],
+      "aspect_ratio": "16:9",
+      "quality": "high",
+      "resolution": "2k",
+      "model": "videotape-alpha",
+      "reference_elements": []
+    }
+  }
+]
