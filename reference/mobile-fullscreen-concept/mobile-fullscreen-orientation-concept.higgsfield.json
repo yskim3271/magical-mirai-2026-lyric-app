@@ -1,0 +1,30 @@
+[
+  {
+    "id": "ebf7157e-801e-4a82-84dd-9c91439b3751",
+    "status": "completed",
+    "display_name": "GPT Image 2",
+    "job_set_type": "gpt_image_2",
+    "result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/hf_20260617_035122_ebf7157e-801e-4a82-84dd-9c91439b3751.png",
+    "created_at": 1781668282.328445,
+    "params": {
+      "width": 2688,
+      "height": 1520,
+      "prompt": "Create a high-fidelity 16:9 mobile UI concept board for the Japanese web lyric app \"湖のソナーレ\". Use the attached screenshot as the exact visual reference for the lake scene, torii, water color, bottom liquid-glass music player, and overall tone. The concept is for improving the mobile fullscreen button and landscape-orientation guide.\n\nShow two mobile states side by side on a quiet dark neutral background, like a product design mockup board:\n\nLEFT STATE: portrait phone screen.\n- The app scene is visible behind the overlay, but softly blurred and dimmed like a thin veil over the lake.\n- Add a translucent liquid-glass orientation guide, not an opaque modal box.\n- Japanese heading: \"湖を横向きにひらく\".\n- Japanese body: \"端末を横向きにすると、湖面いっぱいに歌が広がります。\".\n- Button: \"全画面でひらく\".\n- Include a minimal line icon of a phone rotating into landscape, made with thin luminous strokes and tiny ripple rings.\n- The feeling should be poetic and calm, like entering the lake surface, not a warning screen.\n\nRIGHT STATE: landscape phone screen.\n- Preserve the attached app UI mood: full-bleed realistic lake, distant horizon, subtle torii, reflective water, and thin glass music player at the bottom.\n- Add the top-right mobile fullscreen control as a small transparent glass pill/tab with a simple fullscreen icon and the text \"全画面\".\n- The top-left vertical lyric guide should be present as subtle Japanese Mincho text, not a big card.\n- Keep the UI sparse and functional.\n\nStyle direction:\n- premium liquid glass UI, translucent frosted glass, background visibly shining through the panels\n- subtle cyan-white edge highlights, restrained glow, fine inner shadow, realistic lake background\n- Japanese Mincho typography for the main guide text\n- consistent with Magical Mirai 2026 \"湖のソナーレ\" and a serene lyric app\n\nStrict negative instructions:\n- Do not create a marketing landing page.\n- Do not use opaque rectangular boxes.\n- Do not add cartoon graphics, stickers, big neon blobs, or decorative gradient orbs.\n- Do not redesign the app into a dashboard.\n- Do not put the fullscreen button on the left side.\n- Do not obscure the bottom music player in the landscape state.",
+      "medias": [
+        {
+          "data": {
+            "id": "f7679e9b-11f0-4f9f-8874-9d7b299f9213",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/f7679e9b-11f0-4f9f-8874-9d7b299f9213.png",
+            "type": "media_input"
+          },
+          "role": "image"
+        }
+      ],
+      "aspect_ratio": "16:9",
+      "quality": "high",
+      "resolution": "2k",
+      "model": "videotape-alpha",
+      "reference_elements": []
+    }
+  }
+]

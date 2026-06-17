@@ -24,7 +24,8 @@
       aria-pressed="false"
       hidden
     >
-      全画面
+      <span class="fullscreen-icon" aria-hidden="true"></span>
+      <span class="fullscreen-label">全画面</span>
     </button>
 
     <aside id="soundmark-panel" class="soundmark-panel" aria-live="polite" aria-atomic="true" hidden>
@@ -48,6 +49,67 @@
         <div id="note-progress-bar"></div>
       </div>
     </div>
+
+    <section
+      id="onboarding"
+      class="onboarding"
+      data-step="0"
+      role="dialog"
+      aria-modal="true"
+      aria-labelledby="onboarding-title"
+      aria-describedby="onboarding-copy"
+      hidden
+    >
+      <div class="onboarding-veil" aria-hidden="true"></div>
+      <svg id="onboarding-leaders" class="onboarding-leaders" aria-hidden="true" focusable="false">
+        <path id="onboarding-leader-line" class="onboarding-leader-line"></path>
+      </svg>
+
+      <div class="onboarding-brand" aria-hidden="true">湖のソナーレ</div>
+
+      <article class="onboarding-callout onboarding-callout-guide" data-callout="guide">
+        <span class="onboarding-dot" aria-hidden="true"></span>
+        <h2 id="onboarding-title">歌詞ガイド</h2>
+        <p id="onboarding-copy">小節ごとに、歌の流れをそっと追います。</p>
+      </article>
+
+      <article class="onboarding-callout onboarding-callout-song" data-callout="song">
+        <span class="onboarding-dot" aria-hidden="true"></span>
+        <h2>曲を選ぶ</h2>
+        <p>6曲の受賞作品を、ここから切り替えます。</p>
+      </article>
+
+      <article class="onboarding-callout onboarding-callout-notes" data-callout="notes">
+        <span class="onboarding-dot" aria-hidden="true"></span>
+        <h2>ソナーレノート</h2>
+        <p>湖面のしるしを集めます。水面をそっと押すと、あなたの余韻のように波紋が広がります。</p>
+      </article>
+
+      <article class="onboarding-callout onboarding-callout-panel" data-callout="panel">
+        <span class="onboarding-dot" aria-hidden="true"></span>
+        <h2>テーマパネル</h2>
+        <p>ノートを開くと、湖と音楽をめぐる小さな情報が現れます。</p>
+      </article>
+
+      <article class="onboarding-callout onboarding-callout-collection" data-callout="collection">
+        <span class="onboarding-dot" aria-hidden="true"></span>
+        <h2>集めたノート</h2>
+        <p>曲の終わりに、見つけた数が静かに灯ります。</p>
+      </article>
+
+      <article class="onboarding-callout onboarding-callout-controls" data-callout="controls">
+        <span class="onboarding-dot" aria-hidden="true"></span>
+        <h2>再生コントロール</h2>
+        <p>再生、曲送り、音量をここで整えます。</p>
+      </article>
+
+      <div class="onboarding-nav">
+        <span id="onboarding-step-label" class="onboarding-step-label">1 / 6</span>
+        <button id="btn-onboarding-prev" class="onboarding-button" type="button">前へ</button>
+        <button id="btn-onboarding-next" class="onboarding-button primary" type="button">次へ</button>
+        <button id="btn-onboarding-skip" class="onboarding-button" type="button">スキップ</button>
+      </div>
+    </section>
 
     <section class="control-dock" id="control-dock" aria-label="music player controls">
       <button
@@ -134,18 +196,28 @@
   </main>
 
   <aside class="orientation-lock" aria-label="landscape orientation required">
-    <strong>画面を横向きにしてください</strong>
-    <span>Please rotate your device to landscape.</span>
-    <button
-      id="btn-orientation-fullscreen"
-      class="orientation-fullscreen-toggle"
-      type="button"
-      aria-label="Enter fullscreen"
-      aria-pressed="false"
-      hidden
-    >
-      全画面
-    </button>
+    <div class="orientation-card" role="dialog" aria-labelledby="orientation-title" aria-describedby="orientation-copy">
+      <div class="orientation-visual" aria-hidden="true">
+        <span class="orientation-phone orientation-phone-portrait"></span>
+        <span class="orientation-phone orientation-phone-landscape"></span>
+        <span class="orientation-arrow"></span>
+        <span class="orientation-ripple"></span>
+      </div>
+      <strong id="orientation-title">湖を横向きにひらく</strong>
+      <span id="orientation-copy">端末を横向きにすると、湖面いっぱいに歌が広がります。</span>
+      <button
+        id="btn-orientation-fullscreen"
+        class="orientation-fullscreen-toggle"
+        type="button"
+        aria-label="Enter fullscreen"
+        aria-pressed="false"
+        hidden
+      >
+        <span class="fullscreen-icon" aria-hidden="true"></span>
+        <span class="fullscreen-label">全画面でひらく</span>
+      </button>
+      <p id="fullscreen-status" class="fullscreen-status" aria-live="polite"></p>
+    </div>
   </aside>
 
   <div id="media"></div>

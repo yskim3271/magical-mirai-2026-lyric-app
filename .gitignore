@@ -7,3 +7,4 @@ concept/
 __pycache__/
 *.pyc
 tools/torii-segmentation/models/
+reference/onboarding-concept/chrome-*/
