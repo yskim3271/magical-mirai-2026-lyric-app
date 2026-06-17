@@ -77,7 +77,12 @@ button {
   text-shadow:
     0 0 18px rgba(116, 179, 204, 0.18),
     0 1px 14px rgba(0, 8, 16, 0.44);
+}
+
+.loading-poem span {
+  display: block;
   writing-mode: vertical-rl;
+  text-orientation: mixed;
 }
 
 .loading-meter {
@@ -162,6 +167,43 @@ button {
 
   #loading-progress-label {
     font-size: 14px;
+  }
+}
+
+@media (orientation: portrait) {
+  .loading-poem {
+    top: max(clamp(58px, 11vh, 116px), calc(env(safe-area-inset-top, 0px) + 36px));
+    right: auto;
+    left: 50%;
+    max-width: calc(100vw - 52px);
+    gap: clamp(14px, 4.2vw, 24px);
+    font-size: clamp(21px, 6.3vw, 32px);
+    line-height: 1.62;
+    transform: translateX(-50%);
+  }
+
+  .loading-meter {
+    bottom: max(clamp(68px, 11vh, 126px), calc(env(safe-area-inset-bottom, 0px) + 58px));
+    width: clamp(220px, 64vw, 300px);
+    min-width: 0;
+  }
+
+  #loading-progress-label {
+    margin-top: 18px;
+    font-size: clamp(13px, 3.6vw, 15px);
+    letter-spacing: 0.14em;
+  }
+}
+
+@media (orientation: portrait) and (max-height: 680px) {
+  .loading-poem {
+    top: max(46px, calc(env(safe-area-inset-top, 0px) + 28px));
+    gap: clamp(12px, 3.6vw, 19px);
+    font-size: clamp(19px, 5.8vw, 26px);
+  }
+
+  .loading-meter {
+    bottom: max(48px, calc(env(safe-area-inset-bottom, 0px) + 42px));
   }
 }
 
