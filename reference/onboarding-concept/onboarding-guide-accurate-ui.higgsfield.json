@@ -1,0 +1,30 @@
+[
+  {
+    "id": "7d66787d-503e-4a37-b0ea-ec261f22ab70",
+    "status": "completed",
+    "display_name": "GPT Image 2",
+    "job_set_type": "gpt_image_2",
+    "result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/hf_20260616_174721_7d66787d-503e-4a37-b0ea-ec261f22ab70.png",
+    "created_at": 1781632041.09522,
+    "params": {
+      "width": 2688,
+      "height": 1520,
+      "prompt": "Create a high-fidelity 16:9 UI concept image for the first-run onboarding/tutorial overlay of the web lyric app \"湖のソナーレ\".\n\nUse the attached screenshot as the exact app UI reference. Preserve the existing app screenshot composition and UI components as much as possible:\n- Keep the right SONARE SOUNDMARK panel in the same visual style, size, position, typography, transparent glass material, close button, scrollbar, tags, and source text layout.\n- Keep the top-left vertical lyric guide exactly as vertical Japanese Mincho text, with the same position and line structure.\n- Keep the bottom music player as the same thin liquid-glass rail, with the same controls, progress bar, song selector, time, and volume area.\n- Keep the water soundmark note symbols in their current subtle form.\n- Keep the torii, lake, sky, and reflection composition. Do not invent a different panel, timeline, side card, or lyric format.\n\nAdd only a refined tutorial/onboarding layer above the existing UI:\n- A very subtle transparent dark veil over the scene, not opaque. Existing UI must remain clearly visible.\n- Add 3 or 4 thin elegant curved leader lines and small liquid-glass callout labels. The labels should explain the existing UI but should not replace or redraw it.\n- Point one callout to the vertical lyric guide: Korean title \"가사 가이드\", small text \"소절 단위로 흐름을 따라갑니다\".\n- Point one callout to the water markers: title \"소나레 노트\", small text \"물 위 표식으로 테마 정보를 수집합니다\".\n- Point one callout to the right soundmark panel: title \"테마 패널\", small text \"표식을 누르면 호수와 음악의 정보를 확인합니다\".\n- Point one callout to the bottom player: title \"재생 컨트롤\", small text \"곡 선택, 진행, 볼륨을 조절합니다\".\n- Add a compact page indicator and two tiny glass buttons near the lower-right area above the bottom player: \"1 / 4\", \"건너뛰기\", \"다음\".\n\nStyle direction: premium liquid glass, quiet luminous outlines, poetic Japanese lake atmosphere, minimal annotation, no dashboard look.\n\nStrict negative instructions:\n- Do not redesign the soundmark panel.\n- Do not add a new right-side card layout.\n- Do not turn the lyric guide into a timeline or horizontal list.\n- Do not add debug hatching, debug labels, or exclusion-zone boxes.\n- Do not cover the torii gate or obscure the bottom player.",
+      "medias": [
+        {
+          "data": {
+            "id": "28593ed9-2feb-4351-8448-8e2ee43ed20c",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/28593ed9-2feb-4351-8448-8e2ee43ed20c.png",
+            "type": "media_input"
+          },
+          "role": "image"
+        }
+      ],
+      "aspect_ratio": "16:9",
+      "quality": "high",
+      "resolution": "2k",
+      "model": "videotape-alpha",
+      "reference_elements": []
+    }
+  }
+]

@@ -1,0 +1,30 @@
+[
+  {
+    "id": "3f08b30f-88b0-4b00-be57-20cb3b0dbf79",
+    "status": "completed",
+    "display_name": "GPT Image 2",
+    "job_set_type": "gpt_image_2",
+    "result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/hf_20260616_173710_3f08b30f-88b0-4b00-be57-20cb3b0dbf79.png",
+    "created_at": 1781631430.452224,
+    "params": {
+      "width": 2688,
+      "height": 1520,
+      "prompt": "Create a high-fidelity 16:9 UI concept image for the first-run onboarding/tutorial screen of a web lyric app called \"湖のソナーレ\".\n\nUse the attached screenshot as the base app scene and preserve its composition: realistic lake, distant mountains, torii gate, water reflection, bottom liquid-glass music player, poetic twilight lake atmosphere. The app itself should remain visible and recognizable.\n\nDesign a refined tutorial overlay on top of the screenshot:\n- Add a very subtle transparent dark veil over the full scene, not opaque. The lake, torii, and UI must remain clearly visible through it.\n- Use liquid glass callout labels with thin luminous borders, light blur, and water-like highlights. Avoid large opaque boxes.\n- Add 3 or 4 elegant thin curved arrows or leader lines pointing to the main UX elements:\n  1. Top-left vertical lyric guide area: label in Korean, \"가사 가이드\" and a short line \"소절 단위로 흐름을 따라갑니다\".\n  2. Water surface soundmark markers: label \"소나레 노트\" and \"물 위 표식을 눌러 테마 정보를 수집합니다\".\n  3. Right-side information panel area: label \"테마 패널\" and \"열고 닫으며 풍경을 방해하지 않습니다\".\n  4. Bottom music player: label \"재생 컨트롤\" and \"곡 선택, 진행, 볼륨을 조절합니다\".\n- Use a Mincho-like elegant Korean/Japanese typography mood for headings and clean sans-serif for small descriptions.\n- Add a small minimal page indicator near the lower right above the player: \"1 / 4\", plus two glass buttons \"건너뛰기\" and \"다음\".\n- Keep all overlay elements slender, premium, and integrated with the water/light design. No dashboard look, no marketing hero, no phone mockup.\n- The result should look like a polished product onboarding art direction frame that can guide HTML/CSS implementation.\n\nImportant: do not add extra top panels, do not cover the torii gate, do not obscure the bottom music player, and do not use debug hatching or debug labels.",
+      "medias": [
+        {
+          "data": {
+            "id": "d7471ae7-c015-4005-a136-c6d1e1672667",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/d7471ae7-c015-4005-a136-c6d1e1672667.png",
+            "type": "media_input"
+          },
+          "role": "image"
+        }
+      ],
+      "aspect_ratio": "16:9",
+      "quality": "high",
+      "resolution": "2k",
+      "model": "videotape-alpha",
+      "reference_elements": []
+    }
+  }
+]

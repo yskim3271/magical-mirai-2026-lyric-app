@@ -2,9 +2,12 @@ node_modules/
 dist/
 .env
 .codex-logs/
+.preview-*.log
 moodboard/
 concept/
 __pycache__/
 *.pyc
 tools/torii-segmentation/models/
 reference/onboarding-concept/chrome-*/
+reference/**/chrome-*/
+reference/**/chrome-profile/

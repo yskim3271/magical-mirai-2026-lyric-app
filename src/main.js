@@ -1,6 +1,6 @@
 import { createLakeScene } from "./lakeScene.js";
 import { SONGS, findSong } from "./songs.js";
-import { SOUNDMARKS } from "./soundmarks.js";
+import { SOUNDMARKS, SOUNDMARK_TRANSLATIONS } from "./soundmarks.js";
 import { buildLyricChunks, collectPhrases, collectSegments, collectWords } from "./lyrics.js";
 import { applyLyricCorrections } from "./lyricCorrections.js";
 import { createTextAlivePlayer, loadSong } from "./textalive.js";
@@ -11,11 +11,383 @@ const VOLUME_KEY = "sonareLakeVolume";
 const SOUNDMARK_COLLECTION_KEY = "sonareLakeSoundmarks";
 const LOCALE_KEY = "sonareLakeLocale";
 const SUPPORTED_LOCALES = ["ja", "ko", "en", "zh-Hans"];
+const DEFAULT_UI_LOCALE = "ja";
+const REPEAT_MODES = Object.freeze({
+  OFF: "off",
+  ALL: "all",
+  ONE: "one",
+});
 const LOCALE_LABELS = {
-  ja: { compact: "JA", name: "日本語" },
-  ko: { compact: "KO", name: "한국어" },
-  en: { compact: "EN", name: "English" },
-  "zh-Hans": { compact: "简", name: "简体中文" },
+  ja: { compact: "日本語", name: "日本語" },
+  ko: { compact: "한국어", name: "한국어" },
+  en: { compact: "English", name: "English" },
+  "zh-Hans": { compact: "简体", name: "简体中文" },
+};
+const UI_TRANSLATIONS = {
+  ja: {
+    documentTitle: "マジカルミライ 2026 リリックアプリ",
+    locale: {
+      selection: "表示言語",
+      selectionWithName: "表示言語: {name}",
+    },
+    soundmark: {
+      layerAria: "響きのしるし",
+      close: "響きのしるしを閉じる",
+      kicker: "響きのしるし",
+      noteProgress: "響きのしるし",
+      open: "響きのしるしを開く: {title}",
+      sourcePrefix: "出典",
+      debug: "響きのしるし確認",
+      debugStatus: "響きのしるし確認モードです。再生せずに確認できます。",
+      closePanel: "パネルを閉じる",
+    },
+    onboarding: {
+      guideTitle: "歌詞ガイド",
+      guideCopy: "現在のフレーズを左上に表示します。",
+      songTitle: "曲を選ぶ",
+      songCopy: "6曲の受賞作品をここで選択できます。",
+      notesTitle: "響きのしるし",
+      notesCopy: "湖面に表示されるしるしをクリックして収集します。湖面をクリックすると波紋が出ます。",
+      panelTitle: "情報パネル",
+      panelCopy: "しるしを選択すると、右側に関連情報を表示します。",
+      collectionTitle: "収集状況",
+      collectionCopy: "曲の終了時に、収集したしるしの数を表示します。",
+      controlsTitle: "再生コントロール",
+      controlsCopy: "再生、一時停止、曲送り、音量を操作できます。",
+      prev: "前へ",
+      next: "次へ",
+      skip: "スキップ",
+      start: "はじめる",
+    },
+    controls: {
+      dockAria: "ミュージックプレイヤーの操作",
+      hide: "操作パネルを隠す",
+      show: "操作パネルを開く",
+      playbackPosition: "再生位置",
+      placeholderTitle: "曲を選ぶ",
+      placeholderArtist: "Magical Mirai 2026 Song Contest",
+      targetSongs: "曲を選択",
+      playerControls: "プレイヤー操作",
+      previousSong: "前の曲",
+      play: "再生",
+      pause: "一時停止",
+      stop: "停止",
+      nextSong: "次の曲",
+      shuffle: "シャッフル",
+      repeat: "リピート",
+      repeatOff: "リピートなし",
+      repeatAll: "全曲リピート",
+      repeatOne: "1曲リピート",
+      initializing: "TextAliveを初期化しています...",
+      volume: "音量",
+      beat: "拍",
+      chorus: "サビ",
+      vocal: "ボーカル",
+      statusWaiting: "TextAliveホストから楽曲情報を待っています...",
+      statusReady: "準備ができました。曲を選んでください。",
+      statusLoaded: "{phrases}フレーズ / {words}語 / {chunks}チャンクを読み込みました",
+      loadingSong: "{title}を読み込んでいます...",
+    },
+    fullscreen: {
+      mainEnter: "全画面",
+      mainExit: "解除",
+      orientationEnter: "全画面でひらく",
+      orientationExit: "全画面を閉じる",
+      denied: "全画面不可",
+      enterAria: "全画面にする",
+      exitAria: "全画面を終了",
+      deniedAria: "全画面を使用できません",
+      failure: "全画面に切り替えられませんでした。ブラウザ設定を確認し、端末を横向きにしてください。",
+    },
+    orientation: {
+      aria: "横向き表示が必要です",
+      title: "湖を横向きにひらく",
+      copy: "端末を横向きにすると、湖面いっぱいに歌が広がります。",
+    },
+    guidePreview: {
+      aria: "湖面に映る、音のしるし",
+      text: "湖面に映る、音のしるし",
+      words: [
+        { text: "湖面に", startTime: 0, endTime: 1200, language: "ja" },
+        { text: "映る、", startTime: 1200, endTime: 2400, language: "ja" },
+        { text: "音の", startTime: 2400, endTime: 3600, language: "ja" },
+        { text: "しるし", startTime: 3600, endTime: 5200, language: "ja" },
+      ],
+    },
+  },
+  ko: {
+    documentTitle: "Magical Mirai 2026 리릭앱",
+    locale: {
+      selection: "표시 언어",
+      selectionWithName: "표시 언어: {name}",
+    },
+    soundmark: {
+      layerAria: "울림의 표식",
+      close: "울림의 표식 닫기",
+      kicker: "울림의 표식",
+      noteProgress: "울림의 표식",
+      open: "울림의 표식 열기: {title}",
+      sourcePrefix: "출처",
+      debug: "울림의 표식 확인",
+      debugStatus: "울림의 표식 확인 모드입니다. 재생 없이 살펴볼 수 있습니다.",
+      closePanel: "패널 닫기",
+    },
+    onboarding: {
+      guideTitle: "가사 가이드",
+      guideCopy: "현재 프레이즈를 왼쪽 상단에 표시합니다.",
+      songTitle: "곡 선택",
+      songCopy: "6곡의 수상곡을 여기에서 선택할 수 있습니다.",
+      notesTitle: "울림의 표식",
+      notesCopy: "수면에 표시되는 표식을 클릭해 수집합니다. 호수를 클릭하면 파문이 생깁니다.",
+      panelTitle: "정보 패널",
+      panelCopy: "표식을 선택하면 오른쪽에 관련 정보를 표시합니다.",
+      collectionTitle: "수집 현황",
+      collectionCopy: "곡이 끝나면 수집한 표식 수를 표시합니다.",
+      controlsTitle: "재생 컨트롤",
+      controlsCopy: "재생, 일시정지, 곡 이동, 음량을 조작할 수 있습니다.",
+      prev: "이전",
+      next: "다음",
+      skip: "건너뛰기",
+      start: "시작",
+    },
+    controls: {
+      dockAria: "음악 플레이어 조작",
+      hide: "조작 패널 숨기기",
+      show: "조작 패널 열기",
+      playbackPosition: "재생 위치",
+      placeholderTitle: "곡 선택",
+      placeholderArtist: "Magical Mirai 2026 Song Contest",
+      targetSongs: "곡 선택",
+      playerControls: "플레이어 조작",
+      previousSong: "이전 곡",
+      play: "재생",
+      pause: "일시정지",
+      stop: "정지",
+      nextSong: "다음 곡",
+      shuffle: "셔플",
+      repeat: "반복",
+      repeatOff: "반복 꺼짐",
+      repeatAll: "전체 반복",
+      repeatOne: "한 곡 반복",
+      initializing: "TextAlive 초기화 중...",
+      volume: "음량",
+      beat: "박자",
+      chorus: "후렴",
+      vocal: "보컬",
+      statusWaiting: "TextAlive 호스트에서 곡 정보를 기다리는 중...",
+      statusReady: "준비되었습니다. 곡을 선택하세요.",
+      statusLoaded: "프레이즈 {phrases}개 / 단어 {words}개 / 청크 {chunks}개를 불러왔습니다",
+      loadingSong: "곡을 불러오는 중입니다: {title}",
+    },
+    fullscreen: {
+      mainEnter: "전체화면",
+      mainExit: "해제",
+      orientationEnter: "전체화면으로 열기",
+      orientationExit: "전체화면 해제",
+      denied: "전체화면 사용 불가",
+      enterAria: "전체화면으로 전환",
+      exitAria: "전체화면 해제",
+      deniedAria: "전체화면을 사용할 수 없음",
+      failure: "전체화면으로 전환할 수 없습니다. 브라우저 설정을 확인하고 기기를 가로 방향으로 돌려 주세요.",
+    },
+    orientation: {
+      aria: "가로 화면이 필요합니다",
+      title: "호수를 가로 화면으로 열기",
+      copy: "기기를 가로 방향으로 돌리면 수면 가득 노래가 펼쳐집니다.",
+    },
+    guidePreview: {
+      aria: "湖面に映る、音のしるし",
+      text: "湖面に映る、音のしるし",
+      words: [
+        { text: "湖面に", startTime: 0, endTime: 1200, language: "ja" },
+        { text: "映る、", startTime: 1200, endTime: 2400, language: "ja" },
+        { text: "音の", startTime: 2400, endTime: 3600, language: "ja" },
+        { text: "しるし", startTime: 3600, endTime: 5200, language: "ja" },
+      ],
+    },
+  },
+  en: {
+    documentTitle: "Magical Mirai 2026 Lyric App",
+    locale: {
+      selection: "Language selection",
+      selectionWithName: "Language: {name}",
+    },
+    soundmark: {
+      layerAria: "Echo Marks",
+      close: "Close Echo Mark",
+      kicker: "Echo Mark",
+      noteProgress: "Echo Marks",
+      open: "Open Echo Mark: {title}",
+      sourcePrefix: "Source",
+      debug: "Echo Mark Debug",
+      debugStatus: "Echo Mark debug mode. Playback is not required.",
+      closePanel: "Close panel",
+    },
+    onboarding: {
+      guideTitle: "Lyric Guide",
+      guideCopy: "Shows the current phrase in the upper-left area.",
+      songTitle: "Choose a Song",
+      songCopy: "Select one of the six winning songs here.",
+      notesTitle: "Echo Marks",
+      notesCopy: "Click the marks shown on the water to collect them. Click the lake to create ripples.",
+      panelTitle: "Info Panel",
+      panelCopy: "Select a mark to show related information on the right.",
+      collectionTitle: "Collection Status",
+      collectionCopy: "When a song ends, the number of collected marks is shown.",
+      controlsTitle: "Player Controls",
+      controlsCopy: "Control play, pause, song navigation, and volume.",
+      prev: "Back",
+      next: "Next",
+      skip: "Skip",
+      start: "Start",
+    },
+    controls: {
+      dockAria: "Music player controls",
+      hide: "Hide controls",
+      show: "Show controls",
+      playbackPosition: "Playback position",
+      placeholderTitle: "Choose a Song",
+      placeholderArtist: "Magical Mirai 2026 Song Contest",
+      targetSongs: "Target songs",
+      playerControls: "Player controls",
+      previousSong: "Previous song",
+      play: "Play",
+      pause: "Pause",
+      stop: "Stop",
+      nextSong: "Next song",
+      shuffle: "Shuffle",
+      repeat: "Repeat",
+      repeatOff: "Repeat off",
+      repeatAll: "Repeat all",
+      repeatOne: "Repeat one",
+      initializing: "Initializing TextAlive...",
+      volume: "VOL",
+      beat: "Beat",
+      chorus: "Chorus",
+      vocal: "Vocal",
+      statusWaiting: "Waiting for the TextAlive host song...",
+      statusReady: "Ready. Choose a target song.",
+      statusLoaded: "{phrases} phrases / {words} words / {chunks} chunks loaded",
+      loadingSong: "Loading {title}...",
+    },
+    fullscreen: {
+      mainEnter: "Fullscreen",
+      mainExit: "Exit",
+      orientationEnter: "Open fullscreen",
+      orientationExit: "Exit fullscreen",
+      denied: "Fullscreen unavailable",
+      enterAria: "Enter fullscreen",
+      exitAria: "Exit fullscreen",
+      deniedAria: "Fullscreen unavailable",
+      failure: "Fullscreen could not be started. Check your browser settings and rotate your device to landscape.",
+    },
+    orientation: {
+      aria: "Landscape orientation required",
+      title: "Open the Lake in Landscape",
+      copy: "Rotate your device to landscape, and the song will spread across the lake.",
+    },
+    guidePreview: {
+      aria: "湖面に映る、音のしるし",
+      text: "湖面に映る、音のしるし",
+      words: [
+        { text: "湖面に", startTime: 0, endTime: 1200, language: "ja" },
+        { text: "映る、", startTime: 1200, endTime: 2400, language: "ja" },
+        { text: "音の", startTime: 2400, endTime: 3600, language: "ja" },
+        { text: "しるし", startTime: 3600, endTime: 5200, language: "ja" },
+      ],
+    },
+  },
+  "zh-Hans": {
+    documentTitle: "Magical Mirai 2026 歌词应用",
+    locale: {
+      selection: "语言选择",
+      selectionWithName: "语言：{name}",
+    },
+    soundmark: {
+      layerAria: "回响标记",
+      close: "关闭回响标记",
+      kicker: "回响标记",
+      noteProgress: "回响标记",
+      open: "打开回响标记：{title}",
+      sourcePrefix: "来源",
+      debug: "回响标记调试",
+      debugStatus: "回响标记调试模式。无需播放即可确认。",
+      closePanel: "关闭面板",
+    },
+    onboarding: {
+      guideTitle: "歌词导览",
+      guideCopy: "在左上方显示当前乐句。",
+      songTitle: "选择歌曲",
+      songCopy: "可在这里选择六首获奖作品。",
+      notesTitle: "回响标记",
+      notesCopy: "点击水面上的标记进行收集。点击湖面会产生波纹。",
+      panelTitle: "信息面板",
+      panelCopy: "选择标记后，右侧会显示相关信息。",
+      collectionTitle: "收集进度",
+      collectionCopy: "歌曲结束时会显示已收集的标记数量。",
+      controlsTitle: "播放控制",
+      controlsCopy: "可操作播放、暂停、切换歌曲和音量。",
+      prev: "上一步",
+      next: "下一步",
+      skip: "跳过",
+      start: "开始",
+    },
+    controls: {
+      dockAria: "音乐播放器控制",
+      hide: "隐藏控制栏",
+      show: "显示控制栏",
+      playbackPosition: "播放位置",
+      placeholderTitle: "选择歌曲",
+      placeholderArtist: "Magical Mirai 2026 Song Contest",
+      targetSongs: "目标歌曲",
+      playerControls: "播放器控制",
+      previousSong: "上一首",
+      play: "播放",
+      pause: "暂停",
+      stop: "停止",
+      nextSong: "下一首",
+      shuffle: "随机播放",
+      repeat: "循环",
+      repeatOff: "关闭循环",
+      repeatAll: "全部循环",
+      repeatOne: "单曲循环",
+      initializing: "正在初始化 TextAlive...",
+      volume: "VOL",
+      beat: "节拍",
+      chorus: "副歌",
+      vocal: "人声",
+      statusWaiting: "正在等待 TextAlive 主机歌曲...",
+      statusReady: "准备就绪。请选择目标歌曲。",
+      statusLoaded: "已加载 {phrases} 个乐句 / {words} 个词 / {chunks} 个片段",
+      loadingSong: "正在加载 {title}...",
+    },
+    fullscreen: {
+      mainEnter: "全屏",
+      mainExit: "退出",
+      orientationEnter: "全屏打开",
+      orientationExit: "退出全屏",
+      denied: "无法全屏",
+      enterAria: "进入全屏",
+      exitAria: "退出全屏",
+      deniedAria: "无法使用全屏",
+      failure: "无法进入全屏。请检查浏览器设置，并将设备旋转为横向。",
+    },
+    orientation: {
+      aria: "需要横向屏幕",
+      title: "横向打开湖面",
+      copy: "将设备旋转为横向，歌曲就会铺满湖面。",
+    },
+    guidePreview: {
+      aria: "湖面に映る、音のしるし",
+      text: "湖面に映る、音のしるし",
+      words: [
+        { text: "湖面に", startTime: 0, endTime: 1200, language: "ja" },
+        { text: "映る、", startTime: 1200, endTime: 2400, language: "ja" },
+        { text: "音の", startTime: 2400, endTime: 3600, language: "ja" },
+        { text: "しるし", startTime: 3600, endTime: 5200, language: "ja" },
+      ],
+    },
+  },
 };
 const LYRIC_SPAWN_LEAD_MS = 80;
 const LYRIC_BASE_DROP_MS = 2200;
@@ -186,6 +558,7 @@ const SOUNDMARK_PALETTES = {
 
 const lake = createLakeScene($("#lake-scene"));
 const player = createTextAlivePlayer($("#media"));
+let currentLocale = readPreferredLocale();
 
 initializeLoadingScreen();
 
@@ -221,8 +594,13 @@ let sceneProgressTweenToken = 0;
 let debugSoundmarkProgress = DEBUG_SOUNDMARK_DEFAULT_PROGRESS;
 let debugPlaybackActive = false;
 let playbackActive = false;
+let shuffleEnabled = false;
+let repeatMode = REPEAT_MODES.OFF;
+let shuffleQueue = [];
+let playbackHistory = [];
+let autoplayAfterSongLoad = false;
+let playbackEndHandled = false;
 let isProgressScrubbing = false;
-let currentLocale = readPreferredLocale();
 let pendingSeekPosition = null;
 let pendingSeekStartedAt = 0;
 let songLoadPending = false;
@@ -232,6 +610,7 @@ let onboardingStep = 0;
 let onboardingPreviewApplied = false;
 let onboardingPreviousDockCollapsed = false;
 let onboardingLeaderFrame = null;
+let currentStatusText = { key: "controls.initializing", replacements: {} };
 
 renderSongList();
 bindControls();
@@ -250,13 +629,11 @@ setTransportEnabled(false);
 player.addListener({
   onAppReady(app) {
     if (DEBUG_SOUNDMARKS) {
-      $("#status").textContent = "Soundmark debug mode. Playback is not required.";
+      setStatusText("soundmark.debugStatus");
       return;
     }
 
-    $("#status").textContent = app.managed
-      ? "Waiting for the TextAlive host song..."
-      : "Ready. Choose a target song.";
+    setStatusText(app.managed ? "controls.statusWaiting" : "controls.statusReady");
   },
 
   onVideoReady(video) {
@@ -280,13 +657,18 @@ player.addListener({
     previousLyricPosition = null;
     activeGuidePhraseKey = null;
     isProgressScrubbing = false;
+    playbackEndHandled = false;
     clearPendingSeek();
     resetSoundmarks();
 
     $("#song-title").textContent = song.name || activeSong?.title || "-";
     $("#song-artist").textContent = song.artist?.name || activeSong?.artist || "-";
     $("#now-duration").textContent = formatPlayerTime(video.duration);
-    $("#status").textContent = `${phrases.length} phrases / ${lyricWords.length} words / ${lyricChunks.length} chunks loaded`;
+    setStatusText("controls.statusLoaded", {
+      phrases: phrases.length,
+      words: lyricWords.length,
+      chunks: lyricChunks.length,
+    });
 
     setTransportEnabled(readyToPlay);
   },
@@ -301,6 +683,10 @@ player.addListener({
     }
     setTransportEnabled(true);
     syncMediaElementVolume(getVolumeValue());
+    if (autoplayAfterSongLoad) {
+      autoplayAfterSongLoad = false;
+      setTimeout(() => player.requestPlay(), 0);
+    }
   },
 
   onMediaElementSet() {
@@ -331,6 +717,7 @@ player.addListener({
 
   onStop() {
     playbackActive = false;
+    autoplayAfterSongLoad = false;
     lake.setAmbientRipplesEnabled(true);
     lyricChunkCursor = 0;
     previousPosition = 0;
@@ -338,6 +725,7 @@ player.addListener({
     previousLyricPosition = null;
     activeGuidePhraseKey = null;
     isProgressScrubbing = false;
+    playbackEndHandled = false;
     clearPendingSeek();
     clearSongLoadState();
     hideNoteProgressToast();
@@ -396,7 +784,10 @@ function renderSongList() {
       <em>${song.artist}</em>
     `;
     button.addEventListener("click", () => {
-      transitionToSong(song.id);
+      transitionToSong(song.id, {
+        autoplay: isPlaybackActive(),
+        resetShuffleQueue: true,
+      });
       setSongMenuOpen(false);
     });
     list.appendChild(button);
@@ -405,7 +796,9 @@ function renderSongList() {
 
 function bindControls() {
   $("#btn-play").addEventListener("click", togglePlayback);
-  $("#btn-stop").addEventListener("click", stopPlayback);
+  $("#btn-stop")?.addEventListener("click", stopPlayback);
+  $("#btn-shuffle")?.addEventListener("click", toggleShuffle);
+  $("#btn-repeat")?.addEventListener("click", toggleRepeat);
   $("#btn-prev-song").addEventListener("click", () => selectAdjacentSong(-1));
   $("#btn-next-song").addEventListener("click", () => selectAdjacentSong(1));
   $("#btn-song-menu").addEventListener("click", (event) => {
@@ -480,11 +873,151 @@ function normalizeLocale(locale) {
   return SUPPORTED_LOCALES.includes(locale) ? locale : null;
 }
 
+function getUiLocale() {
+  return UI_TRANSLATIONS[currentLocale] ? currentLocale : DEFAULT_UI_LOCALE;
+}
+
+function getTranslationValue(key) {
+  const segments = key.split(".");
+  const findValue = (locale) => segments.reduce((value, segment) => value?.[segment], UI_TRANSLATIONS[locale]);
+  return findValue(getUiLocale()) ?? findValue(DEFAULT_UI_LOCALE) ?? "";
+}
+
+function t(key, replacements = {}) {
+  const value = getTranslationValue(key);
+  if (typeof value !== "string") return value;
+
+  return value.replace(/\{(\w+)\}/g, (_, name) => (
+    replacements[name] == null ? "" : String(replacements[name])
+  ));
+}
+
+function setText(selector, text) {
+  const element = $(selector);
+  if (element) element.textContent = text;
+}
+
+function setAttribute(selector, name, value) {
+  const element = $(selector);
+  if (element) element.setAttribute(name, value);
+}
+
+function updateDataLineLabel(selector, label) {
+  const element = $(selector);
+  if (!element) return;
+
+  const textNode = Array.from(element.childNodes).find((node) => node.nodeType === Node.TEXT_NODE);
+  if (textNode) {
+    textNode.nodeValue = `${label} `;
+  } else {
+    element.insertBefore(document.createTextNode(`${label} `), element.firstChild);
+  }
+}
+
+function setCalloutText(name, title, copy) {
+  const callout = document.querySelector(`.onboarding-callout[data-callout="${name}"]`);
+  if (!callout) return;
+
+  const titleElement = callout.querySelector("h2");
+  const copyElement = callout.querySelector("p");
+  if (titleElement) titleElement.textContent = title;
+  if (copyElement) copyElement.textContent = copy;
+}
+
+function setStatusText(key, replacements = {}) {
+  currentStatusText = { key, replacements };
+  setText("#status", t(key, replacements));
+}
+
+function getLocalizedSoundmark(soundmark) {
+  if (!soundmark) return null;
+
+  const translation = SOUNDMARK_TRANSLATIONS[getUiLocale()]?.[soundmark.id];
+  if (!translation) return soundmark;
+
+  return {
+    ...soundmark,
+    ...translation,
+    sourceLabel: translation.sourceLabel ?? soundmark.sourceLabel,
+  };
+}
+
+function applyLocaleText() {
+  document.title = t("documentTitle");
+
+  setAttribute("#soundmark-layer", "aria-label", t("soundmark.layerAria"));
+  setAttribute("#soundmark-close", "aria-label", t("soundmark.close"));
+  setText(".soundmark-kicker", t("soundmark.kicker"));
+  setText(".note-progress-copy span", t("soundmark.noteProgress"));
+
+  document.querySelectorAll(".locale-switcher").forEach((switcher) => {
+    switcher.setAttribute("aria-label", t("locale.selection"));
+  });
+  setCalloutText("guide", t("onboarding.guideTitle"), t("onboarding.guideCopy"));
+  setCalloutText("song", t("onboarding.songTitle"), t("onboarding.songCopy"));
+  setCalloutText("notes", t("onboarding.notesTitle"), t("onboarding.notesCopy"));
+  setCalloutText("panel", t("onboarding.panelTitle"), t("onboarding.panelCopy"));
+  setCalloutText("collection", t("onboarding.collectionTitle"), t("onboarding.collectionCopy"));
+  setCalloutText("controls", t("onboarding.controlsTitle"), t("onboarding.controlsCopy"));
+  setText("#btn-onboarding-prev", t("onboarding.prev"));
+  setText("#btn-onboarding-skip", t("onboarding.skip"));
+  setText(
+    "#btn-onboarding-next",
+    onboardingStep >= ONBOARDING_STEP_COUNT - 1 ? t("onboarding.start") : t("onboarding.next"),
+  );
+
+  setAttribute("#control-dock", "aria-label", t("controls.dockAria"));
+  setDockToggleCopy($("#control-dock")?.classList.contains("collapsed") ?? false);
+  setAttribute("#progress-slider", "aria-label", t("controls.playbackPosition"));
+  if (!activeSong) {
+    setText("#song-title", t("controls.placeholderTitle"));
+    setText("#song-artist", t("controls.placeholderArtist"));
+  }
+  setAttribute("#song-list", "aria-label", t("controls.targetSongs"));
+  setAttribute(".transport", "aria-label", t("controls.playerControls"));
+  setAttribute("#btn-prev-song", "aria-label", t("controls.previousSong"));
+  setAttribute("#btn-stop", "aria-label", t("controls.stop"));
+  setAttribute("#btn-next-song", "aria-label", t("controls.nextSong"));
+  setAttribute("#btn-shuffle", "aria-label", t("controls.shuffle"));
+  setAttribute("#btn-repeat", "aria-label", t("controls.repeat"));
+  setAttribute("#volume-slider", "aria-label", t("controls.volume"));
+  updateDataLineLabel(".data-line span:nth-child(1)", t("controls.beat"));
+  updateDataLineLabel(".data-line span:nth-child(2)", t("controls.chorus"));
+  updateDataLineLabel(".data-line span:nth-child(3)", t("controls.vocal"));
+  setText(".soundmark-debug-label", t("soundmark.debug"));
+  setText(".soundmark-debug-close", t("soundmark.closePanel"));
+  if (currentStatusText) setText("#status", t(currentStatusText.key, currentStatusText.replacements));
+  document.querySelectorAll(".soundmark-pin").forEach((marker) => {
+    const soundmark = SOUNDMARKS.find((item) => item.id === marker.dataset.soundmarkId);
+    const localized = getLocalizedSoundmark(soundmark);
+    if (localized) {
+      marker.setAttribute("aria-label", t("soundmark.open", { title: localized.title }));
+      marker.title = localized.title;
+    }
+  });
+
+  setAttribute(".orientation-lock", "aria-label", t("orientation.aria"));
+  setText("#orientation-title", t("orientation.title"));
+  setText("#orientation-copy", t("orientation.copy"));
+
+  updatePlayPauseButton();
+  updatePlaybackModeButtons();
+  updateFullscreenControl();
+  if (onboardingPreviewApplied) {
+    renderOnboardingLyricGuide(ONBOARDING_PREVIEW_PROGRESS);
+  } else if (DEBUG_SOUNDMARKS && activeGuidePhraseKey === "debug-soundmark-guide") {
+    renderDebugLyricGuide(debugSoundmarkProgress);
+  }
+  if (activeSoundmarkId) {
+    const soundmark = SOUNDMARKS.find((item) => item.id === activeSoundmarkId);
+    if (soundmark) renderSoundmarkPanelContent(soundmark);
+  }
+}
+
 function setLocale(locale, options = {}) {
   const { persist = true } = options;
-  const normalized = normalizeLocale(locale) ?? "ja";
+  const normalized = normalizeLocale(locale) ?? DEFAULT_UI_LOCALE;
   currentLocale = normalized;
-  document.documentElement.lang = normalized;
   document.documentElement.dataset.locale = normalized;
 
   if (persist) {
@@ -495,7 +1028,9 @@ function setLocale(locale, options = {}) {
     }
   }
 
+  syncRenderedLanguage();
   syncLocaleControls();
+  applyLocaleText();
 }
 
 function syncLocaleControls() {
@@ -505,7 +1040,8 @@ function syncLocaleControls() {
 
   const menuButton = $("#btn-locale-menu");
   if (menuButton) {
-    menuButton.setAttribute("aria-label", `Language selection: ${label.name}`);
+    menuButton.dataset.currentLocale = currentLocale;
+    menuButton.setAttribute("aria-label", t("locale.selectionWithName", { name: label.name }));
   }
 
   document.querySelectorAll("[data-locale-option]").forEach((button) => {
@@ -519,14 +1055,49 @@ function syncLocaleControls() {
   });
 }
 
+function syncRenderedLanguage() {
+  const renderedLanguage = toHtmlLanguageTag(getUiLocale());
+  document.documentElement.lang = renderedLanguage;
+  document.querySelectorAll("#app, .orientation-lock").forEach((element) => {
+    element.lang = renderedLanguage;
+  });
+
+  document.querySelectorAll("[data-locale-option]").forEach((button) => {
+    const optionLocale = normalizeLocale(button.dataset.localeOption);
+    if (optionLocale) button.lang = toHtmlLanguageTag(optionLocale);
+  });
+}
+
+function toHtmlLanguageTag(locale) {
+  return locale === "zh-Hans" ? "zh-Hans" : locale;
+}
+
 function setLocaleMenuOpen(open) {
   const menu = $("#locale-menu");
   const button = $("#btn-locale-menu");
-  if (!menu || !button) return;
+  const dock = $("#control-dock");
+  if (!menu || !button) {
+    dock?.classList.remove("locale-menu-open");
+    return;
+  }
 
   menu.hidden = !open;
   button.classList.toggle("is-open", open);
   button.setAttribute("aria-expanded", String(open));
+  dock?.classList.toggle("locale-menu-open", open);
+}
+
+function setDockLocaleMenuDisabled(disabled) {
+  const button = $("#btn-locale-menu");
+  if (!button) return;
+
+  if (disabled) setLocaleMenuOpen(false);
+  button.disabled = disabled;
+  if (disabled) {
+    button.setAttribute("aria-disabled", "true");
+  } else {
+    button.removeAttribute("aria-disabled");
+  }
 }
 
 function initializeFullscreenControl() {
@@ -569,7 +1140,7 @@ async function handleFullscreenToggle() {
       }
     }
   } catch {
-    setFullscreenStatus("全画面にできませんでした。ブラウザの設定を確認して、端末を横向きにしてください。");
+    setFullscreenStatus(t("fullscreen.failure"));
     for (const button of buttons) {
       button.classList.add("is-denied");
       setFullscreenButtonCopy(button, false, { denied: true });
@@ -626,21 +1197,21 @@ function setFullscreenButtonCopy(button, active, options = {}) {
 function getFullscreenButtonLabels(button) {
   if (button.id === "btn-orientation-fullscreen") {
     return {
-      enter: "全画面でひらく",
-      exit: "全画面を閉じる",
-      denied: "全画面不可",
-      enterAria: "Enter fullscreen",
-      exitAria: "Exit fullscreen",
-      deniedAria: "Fullscreen unavailable",
+      enter: t("fullscreen.orientationEnter"),
+      exit: t("fullscreen.orientationExit"),
+      denied: t("fullscreen.denied"),
+      enterAria: t("fullscreen.enterAria"),
+      exitAria: t("fullscreen.exitAria"),
+      deniedAria: t("fullscreen.deniedAria"),
     };
   }
   return {
-    enter: "全画面",
-    exit: "退出",
-    denied: "全画面不可",
-    enterAria: "Enter fullscreen",
-    exitAria: "Exit fullscreen",
-    deniedAria: "Fullscreen unavailable",
+    enter: t("fullscreen.mainEnter"),
+    exit: t("fullscreen.mainExit"),
+    denied: t("fullscreen.denied"),
+    enterAria: t("fullscreen.enterAria"),
+    exitAria: t("fullscreen.exitAria"),
+    deniedAria: t("fullscreen.deniedAria"),
   };
 }
 
@@ -674,6 +1245,7 @@ function showOnboarding() {
   overlay.hidden = false;
   app.classList.add("onboarding-active");
   setDockCollapsed(false);
+  setDockLocaleMenuDisabled(true);
   applyOnboardingPreview();
   updateOnboardingStep();
   scheduleAnimationFrame(() => overlay.classList.add("is-open"));
@@ -693,6 +1265,7 @@ function closeOnboarding() {
   clearOnboardingLeaderLine();
   resetOnboardingPreview();
   setDockCollapsed(onboardingPreviousDockCollapsed);
+  setDockLocaleMenuDisabled(false);
 
   setTimeout(() => {
     if (!onboardingActive) overlay.hidden = true;
@@ -748,7 +1321,9 @@ function updateOnboardingStep() {
   updateOnboardingActiveCallout(overlay);
   if (label) label.textContent = `${onboardingStep + 1} / ${ONBOARDING_STEP_COUNT}`;
   if (prevButton) prevButton.disabled = onboardingStep <= 0;
-  if (nextButton) nextButton.textContent = onboardingStep >= ONBOARDING_STEP_COUNT - 1 ? "はじめる" : "次へ";
+  if (nextButton) nextButton.textContent = onboardingStep >= ONBOARDING_STEP_COUNT - 1
+    ? t("onboarding.start")
+    : t("onboarding.next");
   updateOnboardingSoundmarkPanelPreview();
   updateOnboardingNoteProgressPreview();
   clearOnboardingLeaderLine();
@@ -942,6 +1517,7 @@ function renderOnboardingLyricGuide(progress) {
   const guide = $("#lyric-guide");
   if (!guide) return;
 
+  const preview = t("guidePreview");
   activeGuidePhraseKey = "onboarding-guide";
   applyLyricGuidePalette(guide, progress);
   guide.dataset.phase = getLyricGuidePhaseLabel(progress);
@@ -949,17 +1525,12 @@ function renderOnboardingLyricGuide(progress) {
   guide.classList.add("chorus");
   renderLyricGuidePhrase({
     key: activeGuidePhraseKey,
-    text: "湖面に映る、音のしるし",
+    text: preview.text,
     startTime: 0,
     endTime: 6000,
-    words: [
-      { text: "湖面に", startTime: 0, endTime: 1200, language: "ja" },
-      { text: "映る、", startTime: 1200, endTime: 2400, language: "ja" },
-      { text: "音の", startTime: 2400, endTime: 3600, language: "ja" },
-      { text: "しるし", startTime: 3600, endTime: 5200, language: "ja" },
-    ],
+    words: preview.words,
   });
-  guide.setAttribute("aria-label", "湖面に映る、音のしるし");
+  guide.setAttribute("aria-label", preview.aria);
 }
 
 function showOnboardingNoteProgressPreview() {
@@ -1028,6 +1599,28 @@ function togglePlayback() {
   }
 }
 
+function toggleShuffle() {
+  shuffleEnabled = !shuffleEnabled;
+  if (shuffleEnabled) {
+    resetShuffleQueue(activeSong?.id);
+  } else {
+    shuffleQueue = [];
+    playbackHistory = [];
+  }
+  updatePlaybackModeButtons();
+}
+
+function toggleRepeat() {
+  repeatMode = getNextRepeatMode(repeatMode);
+  updatePlaybackModeButtons();
+}
+
+function getNextRepeatMode(mode) {
+  if (mode === REPEAT_MODES.OFF) return REPEAT_MODES.ALL;
+  if (mode === REPEAT_MODES.ALL) return REPEAT_MODES.ONE;
+  return REPEAT_MODES.OFF;
+}
+
 function stopPlayback() {
   if (DEBUG_SOUNDMARKS) {
     debugPlaybackActive = false;
@@ -1039,6 +1632,8 @@ function stopPlayback() {
   }
 
   playbackActive = false;
+  autoplayAfterSongLoad = false;
+  playbackEndHandled = false;
   isProgressScrubbing = false;
   clearPendingSeek();
   clearSongLoadState();
@@ -1050,13 +1645,113 @@ function stopPlayback() {
 
 function selectAdjacentSong(direction) {
   if (!activeSong) {
-    transitionToSong(SONGS[0].id);
+    transitionToSong(SONGS[0].id, { resetShuffleQueue: true });
     return;
   }
 
-  const currentIndex = Math.max(0, SONGS.findIndex((song) => song.id === activeSong.id));
-  const nextIndex = (currentIndex + direction + SONGS.length) % SONGS.length;
-  transitionToSong(SONGS[nextIndex].id);
+  const songId = direction > 0
+    ? getNextSongId({ manual: true })
+    : getPreviousSongId({ manual: true });
+  if (!songId) return;
+
+  transitionToSong(songId, {
+    autoplay: isPlaybackActive(),
+    recordHistory: direction > 0,
+    resetShuffleQueue: false,
+  });
+}
+
+function getNextSongId({ manual = false } = {}) {
+  if (!activeSong) return SONGS[0]?.id ?? null;
+
+  if (shuffleEnabled && SONGS.length > 1) {
+    return takeNextShuffleSongId(activeSong.id, {
+      allowNewCycle: manual || repeatMode === REPEAT_MODES.ALL,
+    });
+  }
+
+  const currentIndex = getActiveSongIndex();
+  if (currentIndex < 0) return SONGS[0]?.id ?? null;
+  const nextIndex = currentIndex + 1;
+  if (nextIndex < SONGS.length) return SONGS[nextIndex].id;
+  return manual || repeatMode === REPEAT_MODES.ALL ? SONGS[0]?.id ?? null : null;
+}
+
+function getPreviousSongId({ manual = false } = {}) {
+  if (!activeSong) return SONGS[0]?.id ?? null;
+
+  if (shuffleEnabled && playbackHistory.length > 0) {
+    return playbackHistory.pop();
+  }
+
+  const currentIndex = getActiveSongIndex();
+  if (currentIndex < 0) return SONGS[0]?.id ?? null;
+  const previousIndex = currentIndex - 1;
+  if (previousIndex >= 0) return SONGS[previousIndex].id;
+  return manual ? SONGS[SONGS.length - 1]?.id ?? null : null;
+}
+
+function getActiveSongIndex() {
+  return SONGS.findIndex((song) => song.id === activeSong?.id);
+}
+
+function takeNextShuffleSongId(currentSongId, { allowNewCycle = false } = {}) {
+  if (shuffleQueue.length <= 0 && allowNewCycle) {
+    resetShuffleQueue(currentSongId);
+  }
+
+  while (shuffleQueue.length > 0) {
+    const nextId = shuffleQueue.shift();
+    if (nextId && nextId !== currentSongId) return nextId;
+  }
+
+  if (allowNewCycle) {
+    resetShuffleQueue(currentSongId);
+    return shuffleQueue.shift() ?? null;
+  }
+
+  return null;
+}
+
+function resetShuffleQueue(currentSongId = activeSong?.id) {
+  shuffleQueue = shuffleSongIds(SONGS
+    .map((song) => song.id)
+    .filter((songId) => songId !== currentSongId));
+}
+
+function shuffleSongIds(songIds) {
+  const values = [...songIds];
+  for (let index = values.length - 1; index > 0; index -= 1) {
+    const swapIndex = Math.floor(Math.random() * (index + 1));
+    [values[index], values[swapIndex]] = [values[swapIndex], values[index]];
+  }
+  return values;
+}
+
+function recordPlaybackHistory(songId) {
+  if (!songId) return;
+  playbackHistory = playbackHistory.filter((historySongId) => historySongId !== songId);
+  playbackHistory.push(songId);
+  if (playbackHistory.length > SONGS.length) {
+    playbackHistory = playbackHistory.slice(-SONGS.length);
+  }
+}
+
+function getRepeatModeLabel() {
+  if (repeatMode === REPEAT_MODES.ALL) return t("controls.repeatAll");
+  if (repeatMode === REPEAT_MODES.ONE) return t("controls.repeatOne");
+  return t("controls.repeatOff");
+}
+
+function restartCurrentSong({ resume = false } = {}) {
+  clearPendingSeek();
+  clearSoundmarkSpawnQueue();
+  hideNoteProgressToast();
+  player.requestMediaSeek(0);
+  updatePlayback(0, { force: true });
+  if (resume) {
+    setTimeout(() => player.requestPlay(), 0);
+  }
 }
 
 function setSongMenuOpen(open) {
@@ -1102,6 +1797,7 @@ function seekToProgress(progress) {
   if (!readyToPlay || duration <= 0) return;
 
   const position = clamp(progress, 0, 1) * duration;
+  playbackEndHandled = false;
   setPendingSeek(position);
   clearSoundmarkSpawnQueue();
   player.requestMediaSeek(position);
@@ -1161,9 +1857,7 @@ function setVolume(value, { persist = false } = {}) {
 function updateVolumeDisplay(volume) {
   const safeVolume = Math.round(clamp(Number(volume), 0, 100));
   const slider = $("#volume-slider");
-  const label = $("#volume-label");
   if (slider) slider.value = String(safeVolume);
-  if (label) label.textContent = `${safeVolume}%`;
 }
 
 function syncMediaElementVolume(volume) {
@@ -1197,14 +1891,11 @@ function toggleDock() {
 function setDockCollapsed(collapsed) {
   const dock = $("#control-dock");
   const app = $("#app");
-  const button = $("#btn-toggle-dock");
   const panel = $("#dock-panel");
 
   dock.classList.toggle("collapsed", collapsed);
   app.classList.toggle("dock-collapsed", collapsed);
-  button.title = collapsed ? "Show controls" : "Hide controls";
-  button.setAttribute("aria-label", collapsed ? "Show controls" : "Hide controls");
-  button.setAttribute("aria-expanded", String(!collapsed));
+  setDockToggleCopy(collapsed);
   if (panel) {
     panel.inert = collapsed;
     panel.setAttribute("aria-hidden", String(collapsed));
@@ -1214,14 +1905,37 @@ function setDockCollapsed(collapsed) {
   setTimeout(updateSoundmarkPlacementOverlay, 220);
 }
 
-async function transitionToSong(songId) {
+function setDockToggleCopy(collapsed) {
+  const button = $("#btn-toggle-dock");
+  if (!button) return;
+
+  const label = collapsed ? t("controls.show") : t("controls.hide");
+  button.title = label;
+  button.setAttribute("aria-label", label);
+  button.setAttribute("aria-expanded", String(!collapsed));
+}
+
+async function transitionToSong(songId, {
+  autoplay = false,
+  recordHistory = false,
+  resetShuffleQueue: shouldResetShuffleQueue = false,
+} = {}) {
   if (sceneTransitionActive) return;
   if (activeSong?.id === songId && !DEBUG_SOUNDMARKS) return;
 
+  const previousSongId = activeSong?.id;
   sceneTransitionActive = true;
+  autoplayAfterSongLoad = Boolean(autoplay);
+  if (recordHistory) {
+    recordPlaybackHistory(previousSongId);
+  }
   try {
     await setSceneTransitionVisible(true);
     selectSong(songId, { resetSceneProgress: false });
+    if (shouldResetShuffleQueue && shuffleEnabled) {
+      resetShuffleQueue(songId);
+      playbackHistory = [];
+    }
     await tweenVisualSongProgress(visualSongProgress, 0, SCENE_PROGRESS_TWEEN_MS);
     await wait(Math.max(0, SCENE_TRANSITION_OUT_MS - SCENE_PROGRESS_TWEEN_MS));
   } finally {
@@ -1301,6 +2015,7 @@ function selectSong(songId, { resetSceneProgress = true } = {}) {
   segments = [];
   readyToPlay = false;
   playbackActive = false;
+  playbackEndHandled = false;
   isProgressScrubbing = false;
   noteProgressShownSongId = null;
   lyricChunkCursor = 0;
@@ -1317,12 +2032,12 @@ function selectSong(songId, { resetSceneProgress = true } = {}) {
   resetDisplay({ resetSceneProgress });
   if (DEBUG_SOUNDMARKS) {
     completeSongLoad({ skipSettling: true });
-    $("#status").textContent = "Soundmark debug mode. Playback is not required.";
+    setStatusText("soundmark.debugStatus");
     setDebugSoundmarkProgress(debugSoundmarkProgress);
     return;
   }
 
-  $("#status").textContent = `Loading ${activeSong.title}...`;
+  setStatusText("controls.loadingSong", { title: activeSong.title });
   loadSong(player, activeSong);
 }
 
@@ -1368,21 +2083,43 @@ function setTransportEnabled(enabled) {
   const progressSlider = $("#progress-slider");
   if (progressSlider) progressSlider.disabled = !transportEnabled;
   updatePlayPauseButton();
+  updatePlaybackModeButtons();
 }
 
 function updatePlayPauseButton() {
   const button = $("#btn-play");
-  const icon = $("#play-icon");
-  if (!button || !icon) return;
+  if (!button) return;
 
   const playing = isPlaybackActive();
-  button.setAttribute("aria-label", playing ? "Pause" : "Play");
-  button.title = playing ? "Pause" : "Play";
-  icon.textContent = playing ? "Ⅱ" : "▶";
+  const label = playing ? t("controls.pause") : t("controls.play");
+  button.classList.toggle("is-playing", playing);
+  button.setAttribute("aria-label", label);
+  button.title = label;
 }
 
 function isPlaybackActive() {
   return DEBUG_SOUNDMARKS ? debugPlaybackActive : playbackActive;
+}
+
+function updatePlaybackModeButtons() {
+  const shuffleButton = $("#btn-shuffle");
+  if (shuffleButton) {
+    shuffleButton.classList.toggle("active", shuffleEnabled);
+    shuffleButton.setAttribute("aria-pressed", String(shuffleEnabled));
+    shuffleButton.title = t("controls.shuffle");
+  }
+
+  const repeatButton = $("#btn-repeat");
+  if (repeatButton) {
+    const repeatActive = repeatMode !== REPEAT_MODES.OFF;
+    const repeatLabel = getRepeatModeLabel();
+    repeatButton.classList.toggle("active", repeatActive);
+    repeatButton.classList.toggle("repeat-one", repeatMode === REPEAT_MODES.ONE);
+    repeatButton.dataset.repeatMode = repeatMode;
+    repeatButton.setAttribute("aria-pressed", String(repeatActive));
+    repeatButton.setAttribute("aria-label", repeatLabel);
+    repeatButton.title = repeatLabel;
+  }
 }
 
 function updateProgressDisplay(progress, { syncSlider = true, force = false } = {}) {
@@ -1431,6 +2168,45 @@ function updatePlayback(position, { force = false } = {}) {
   updateLyricGuide(position, progress, Boolean(chorus));
   pulseBeatIfNeeded(beat, position, amplitude);
   spawnDueLyricChunks(position, amplitude, Boolean(chorus));
+  handlePlaybackEnd(progress, duration);
+}
+
+function handlePlaybackEnd(progress, duration) {
+  if (progress < 0.98) {
+    playbackEndHandled = false;
+    return;
+  }
+
+  if (
+    playbackEndHandled
+    || !readyToPlay
+    || duration <= 0
+    || progress < 0.999
+    || isProgressScrubbing
+    || sceneTransitionActive
+  ) {
+    return;
+  }
+
+  playbackEndHandled = true;
+  const shouldResume = isPlaybackActive();
+
+  if (repeatMode === REPEAT_MODES.ONE) {
+    restartCurrentSong({ resume: shouldResume });
+    return;
+  }
+
+  const nextSongId = getNextSongId();
+  if (!nextSongId) return;
+
+  clearPendingSeek();
+  clearSoundmarkSpawnQueue();
+  hideNoteProgressToast();
+  transitionToSong(nextSongId, {
+    autoplay: shouldResume,
+    recordHistory: true,
+    resetShuffleQueue: false,
+  });
 }
 
 function beginSongLoad() {
@@ -1741,7 +2517,7 @@ function initializeSoundmarkDebugMode() {
   renderSoundmarkDebugTools();
   setDebugSoundmarkProgress(DEBUG_SOUNDMARK_DEFAULT_PROGRESS);
   openSoundmarkPanel(getVisibleSoundmarks(debugSoundmarkProgress)[0] ?? SOUNDMARKS[0]);
-  $("#status").textContent = "Soundmark debug mode. Playback is not required.";
+  setStatusText("soundmark.debugStatus");
 }
 
 function renderSoundmarkDebugTools() {
@@ -1755,7 +2531,7 @@ function renderSoundmarkDebugTools() {
 
   const label = document.createElement("span");
   label.className = "soundmark-debug-label";
-  label.textContent = "Soundmark debug";
+  label.textContent = t("soundmark.debug");
   tools.appendChild(label);
 
   for (const phase of DEBUG_SOUNDMARK_PHASES) {
@@ -1769,7 +2545,8 @@ function renderSoundmarkDebugTools() {
 
   const closeButton = document.createElement("button");
   closeButton.type = "button";
-  closeButton.textContent = "Close panel";
+  closeButton.className = "soundmark-debug-close";
+  closeButton.textContent = t("soundmark.closePanel");
   closeButton.addEventListener("click", () => closeSoundmarkPanel());
   tools.appendChild(closeButton);
 
@@ -1816,6 +2593,7 @@ function renderDebugLyricGuide(progress) {
   const guide = $("#lyric-guide");
   if (!guide) return;
 
+  const preview = t("guidePreview");
   activeGuidePhraseKey = "debug-soundmark-guide";
   applyLyricGuidePalette(guide, progress);
   guide.dataset.phase = getLyricGuidePhaseLabel(progress);
@@ -1823,17 +2601,12 @@ function renderDebugLyricGuide(progress) {
   guide.classList.toggle("chorus", progress >= 0.42 && progress <= 0.72);
   renderLyricGuidePhrase({
     key: activeGuidePhraseKey,
-    text: "湖面に映る、音のしるし",
+    text: preview.text,
     startTime: 0,
     endTime: 6000,
-    words: [
-      { text: "湖面に", startTime: 0, endTime: 1200, language: "ja" },
-      { text: "映る、", startTime: 1200, endTime: 2400, language: "ja" },
-      { text: "音の", startTime: 2400, endTime: 3600, language: "ja" },
-      { text: "しるし", startTime: 3600, endTime: 5200, language: "ja" },
-    ],
+    words: preview.words,
   });
-  guide.setAttribute("aria-label", "湖面に映る、音のしるし");
+  guide.setAttribute("aria-label", preview.aria);
 }
 
 function getVisibleSoundmarks(progress) {
@@ -2074,6 +2847,7 @@ function spawnSoundmarkMarker(soundmark) {
   const layer = $("#soundmark-layer");
   if (!layer) return;
 
+  const localized = getLocalizedSoundmark(soundmark) ?? soundmark;
   const position = getSoundmarkPosition(soundmark);
   const marker = document.createElement("button");
   marker.type = "button";
@@ -2084,8 +2858,8 @@ function spawnSoundmarkMarker(soundmark) {
   marker.classList.toggle("visited", discoveredSoundmarkIds.has(soundmark.id));
   marker.style.left = `${position.x * 100}%`;
   marker.style.top = `${(1 - position.y) * 100}%`;
-  marker.setAttribute("aria-label", `Open soundmark: ${soundmark.title}`);
-  marker.title = soundmark.title;
+  marker.setAttribute("aria-label", t("soundmark.open", { title: localized.title }));
+  marker.title = localized.title;
 
   const symbol = document.createElement("span");
   symbol.className = "soundmark-symbol";
@@ -2405,17 +3179,22 @@ function openSoundmarkPanel(soundmark, options = {}) {
   $("#app")?.classList.add("soundmark-panel-open");
   updateFullscreenControl();
 
-  $("#soundmark-title").textContent = soundmark.title;
-  $("#soundmark-body").textContent = soundmark.body;
-  $("#soundmark-caption").textContent = soundmark.caption;
-  renderSoundmarkTags(soundmark.tags);
-  renderSoundmarkSource(soundmark);
+  renderSoundmarkPanelContent(soundmark);
   markActiveSoundmark();
 
   panel.hidden = false;
   panel.dataset.phase = getLyricGuidePhaseLabel(soundmarkLastProgress);
   scheduleAnimationFrame(() => panel.classList.add("is-open"));
   scheduleAnimationFrame(updateSoundmarkPlacementOverlay);
+}
+
+function renderSoundmarkPanelContent(soundmark) {
+  const localized = getLocalizedSoundmark(soundmark);
+  if (!localized) return;
+
+  $("#soundmark-title").textContent = localized.title;
+  $("#soundmark-body").textContent = localized.body;
+  renderSoundmarkSource(localized);
 }
 
 function closeSoundmarkPanel(options = {}) {
@@ -2525,19 +3304,6 @@ function recordSoundmarkDiscovery(soundmarkId) {
   return true;
 }
 
-function renderSoundmarkTags(tags) {
-  const container = $("#soundmark-tags");
-  if (!container) return;
-
-  container.replaceChildren();
-  for (const tag of tags ?? []) {
-    const element = document.createElement("span");
-    element.className = "soundmark-tag";
-    element.textContent = tag;
-    container.appendChild(element);
-  }
-}
-
 function renderSoundmarkSource(soundmark) {
   const source = $("#soundmark-source");
   if (!source) return;
@@ -2551,7 +3317,7 @@ function renderSoundmarkSource(soundmark) {
 
   source.hidden = false;
   source.href = soundmark.sourceUrl;
-  source.textContent = `SOURCE / ${soundmark.sourceLabel}`;
+  source.textContent = `${t("soundmark.sourcePrefix")} / ${soundmark.sourceLabel}`;
 }
 
 function markActiveSoundmark() {
@@ -2989,6 +3755,7 @@ function toScreenPosition(position) {
 function spawnLyricDrop(text, x, y, chorus, duration) {
   const effect = document.createElement("span");
   effect.className = `lyric-drop${chorus ? " chorus" : ""}`;
+  effect.lang = "ja";
   effect.textContent = trimLyricText(text);
   const nearDepth = clamp((0.565 - y) / 0.565, 0, 1);
   const scale = 0.5 + nearDepth * 0.78;

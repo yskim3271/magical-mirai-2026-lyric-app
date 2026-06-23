@@ -1,18 +1,20 @@
 <!DOCTYPE html>
-<html lang="ko">
+<html lang="ja">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Magical Mirai 2026 Lyric App</title>
+  <title>マジカルミライ 2026 リリックアプリ</title>
+  <link rel="preload" href="/fonts/noto-serif-jp/sonare-noto-serif-jp.woff2" as="font" type="font/woff2" crossorigin />
   <link rel="stylesheet" href="/src/styles.css" />
 </head>
 <body>
   <section
     id="app-loading"
     class="app-loading"
+    lang="ja"
     role="status"
     aria-live="polite"
-    aria-label="Loading lake scene"
+    aria-label="湖の景色を読み込み中"
   >
     <p class="loading-poem" aria-hidden="true">
       <span>湖のソナーレ</span>
@@ -37,8 +39,8 @@
   <main id="app">
     <div id="lake-scene" aria-hidden="true"></div>
     <div id="lyric-effects" aria-hidden="true"></div>
-    <div id="soundmark-layer" class="soundmark-layer" aria-label="Sonare soundmarks"></div>
-    <div id="lyric-guide" class="lyric-guide is-empty" data-phase="day" aria-live="polite" aria-atomic="true"></div>
+    <div id="soundmark-layer" class="soundmark-layer" aria-label="響きのしるし"></div>
+    <div id="lyric-guide" class="lyric-guide is-empty" lang="ja" data-phase="day" aria-live="polite" aria-atomic="true"></div>
     <div id="soundmark-placement-overlay" aria-hidden="true" hidden></div>
     <div id="torii-exclusion-zone" aria-hidden="true" hidden></div>
     <div id="torii-reflection-overlay" aria-hidden="true" hidden></div>
@@ -47,7 +49,7 @@
       id="btn-fullscreen"
       class="fullscreen-toggle"
       type="button"
-      aria-label="Enter fullscreen"
+      aria-label="全画面にする"
       aria-pressed="false"
       hidden
     >
@@ -56,20 +58,18 @@
     </button>
 
     <aside id="soundmark-panel" class="soundmark-panel" aria-live="polite" aria-atomic="true" hidden>
-      <button id="soundmark-close" class="soundmark-close" type="button" aria-label="Close soundmark">×</button>
+      <button id="soundmark-close" class="soundmark-close" type="button" aria-label="響きのしるしを閉じる">×</button>
       <div class="soundmark-content">
-        <p class="soundmark-kicker">SONARE SOUNDMARK</p>
+        <p class="soundmark-kicker">響きのしるし</p>
         <h2 id="soundmark-title"></h2>
         <p id="soundmark-body" class="soundmark-body"></p>
-        <div id="soundmark-tags" class="soundmark-tags" aria-label="related keywords"></div>
-        <p id="soundmark-caption" class="soundmark-caption"></p>
         <a id="soundmark-source" class="soundmark-source" href="#" target="_blank" rel="noreferrer"></a>
       </div>
     </aside>
 
     <div id="note-progress-toast" class="note-progress-toast" aria-live="polite" aria-atomic="true" hidden>
       <div class="note-progress-copy">
-        <span>SONARE NOTES</span>
+        <span>響きのしるし</span>
         <b id="note-progress-count">0/24</b>
       </div>
       <div class="note-progress-track" aria-hidden="true">
@@ -91,9 +91,7 @@
       <svg id="onboarding-leaders" class="onboarding-leaders" aria-hidden="true" focusable="false">
         <path id="onboarding-leader-line" class="onboarding-leader-line"></path>
       </svg>
-
-      <div class="onboarding-brand" aria-hidden="true">湖のソナーレ</div>
-      <div class="locale-switcher locale-switcher-onboarding" role="group" aria-label="Language selection">
+      <div class="locale-switcher locale-switcher-onboarding" role="group" aria-label="表示言語">
         <button class="locale-option" type="button" data-locale-option="ja" aria-pressed="false">日本語</button>
         <button class="locale-option" type="button" data-locale-option="ko" aria-pressed="false">한국어</button>
         <button class="locale-option" type="button" data-locale-option="en" aria-pressed="false">EN</button>
@@ -103,37 +101,37 @@
       <article class="onboarding-callout onboarding-callout-guide" data-callout="guide">
         <span class="onboarding-dot" aria-hidden="true"></span>
         <h2 id="onboarding-title">歌詞ガイド</h2>
-        <p id="onboarding-copy">小節ごとに、歌の流れをそっと追います。</p>
+        <p id="onboarding-copy">現在のフレーズを左上に表示します。</p>
       </article>
 
       <article class="onboarding-callout onboarding-callout-song" data-callout="song">
         <span class="onboarding-dot" aria-hidden="true"></span>
         <h2>曲を選ぶ</h2>
-        <p>6曲の受賞作品を、ここから切り替えます。</p>
+        <p>6曲の受賞作品をここで選択できます。</p>
       </article>
 
       <article class="onboarding-callout onboarding-callout-notes" data-callout="notes">
         <span class="onboarding-dot" aria-hidden="true"></span>
-        <h2>ソナーレノート</h2>
-        <p>湖面のしるしを集めます。水面をそっと押すと、あなたの余韻のように波紋が広がります。</p>
+        <h2>響きのしるし</h2>
+        <p>湖面に表示されるしるしをクリックして収集します。湖面をクリックすると波紋が出ます。</p>
       </article>
 
       <article class="onboarding-callout onboarding-callout-panel" data-callout="panel">
         <span class="onboarding-dot" aria-hidden="true"></span>
-        <h2>テーマパネル</h2>
-        <p>ノートを開くと、湖と音楽をめぐる小さな情報が現れます。</p>
+        <h2>情報パネル</h2>
+        <p>しるしを選択すると、右側に関連情報を表示します。</p>
       </article>
 
       <article class="onboarding-callout onboarding-callout-collection" data-callout="collection">
         <span class="onboarding-dot" aria-hidden="true"></span>
-        <h2>集めたノート</h2>
-        <p>曲の終わりに、見つけた数が静かに灯ります。</p>
+        <h2>収集状況</h2>
+        <p>曲の終了時に、収集したしるしの数を表示します。</p>
       </article>
 
       <article class="onboarding-callout onboarding-callout-controls" data-callout="controls">
         <span class="onboarding-dot" aria-hidden="true"></span>
         <h2>再生コントロール</h2>
-        <p>再生、曲送り、音量をここで整えます。</p>
+        <p>再生、一時停止、曲送り、音量を操作できます。</p>
       </article>
 
       <div class="onboarding-nav">
@@ -144,33 +142,18 @@
       </div>
     </section>
 
-    <section class="control-dock" id="control-dock" aria-label="music player controls">
+    <section class="control-dock" id="control-dock" aria-label="ミュージックプレイヤーの操作">
       <button
         class="dock-toggle"
         id="btn-toggle-dock"
         type="button"
-        title="Hide controls"
-        aria-label="Hide controls"
+        title="操作パネルを隠す"
+        aria-label="操作パネルを隠す"
         aria-expanded="true"
         aria-controls="dock-panel"
       ></button>
 
       <div class="dock-panel" id="dock-panel">
-        <div class="progress" id="progress-track">
-          <div id="progress-bar"></div>
-          <input
-            id="progress-slider"
-            class="progress-slider"
-            type="range"
-            min="0"
-            max="1000"
-            step="1"
-            value="0"
-            aria-label="Playback position"
-            disabled
-          />
-        </div>
-
         <div class="player-rail">
           <div class="song-select">
             <button
@@ -182,52 +165,106 @@
               aria-controls="song-list"
             >
               <span class="track-copy">
-                <span id="song-title" class="track-title">湖のソナーレ</span>
-                <span id="song-artist" class="track-artist">6-song lyric experience</span>
+                <span id="song-title" class="track-title">曲を選ぶ</span>
+                <span id="song-artist" class="track-artist">Magical Mirai 2026 Song Contest</span>
               </span>
-              <span class="select-chevron" aria-hidden="true">⌄</span>
+              <span class="select-chevron" aria-hidden="true"></span>
             </button>
 
-            <div class="song-strip" id="song-list" role="listbox" aria-label="target songs" hidden></div>
+            <div class="song-strip" id="song-list" role="listbox" aria-label="曲を選択" hidden></div>
           </div>
 
-          <div class="transport" aria-label="player controls">
-            <button id="btn-prev-song" class="transport-button" type="button" aria-label="Previous song">
-              <span aria-hidden="true">⏮︎</span>
-            </button>
-            <button id="btn-play" class="transport-button primary" type="button" aria-label="Play" disabled>
-              <span id="play-icon" aria-hidden="true">▶</span>
-            </button>
-            <button id="btn-stop" class="transport-button" type="button" aria-label="Stop" disabled>
-              <span aria-hidden="true">■</span>
-            </button>
-            <button id="btn-next-song" class="transport-button" type="button" aria-label="Next song">
-              <span aria-hidden="true">⏭︎</span>
-            </button>
+          <div class="playback-core">
+            <div class="transport" aria-label="プレイヤー操作">
+              <button id="btn-shuffle" class="transport-button mode" type="button" aria-label="シャッフル" aria-pressed="false">
+                <svg class="transport-icon shuffle-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M4 17h1.9c1.25 0 2.35-0.62 3.08-1.64l6.02-8.72C15.73 5.62 16.84 5 18.08 5H20" />
+                  <path d="M4 7h2.1c1.18 0 2.2 0.54 2.92 1.48l0.98 1.3" />
+                  <path d="M14 14.25 15 15.5C15.74 16.44 16.78 17 18 17h2" />
+                  <path d="M17.25 2.75 20.5 5l-3.25 2.25" />
+                  <path d="M17.25 14.75 20.5 17l-3.25 2.25" />
+                </svg>
+              </button>
+              <button id="btn-prev-song" class="transport-button" type="button" aria-label="前の曲">
+                <svg class="transport-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path class="icon-filled" d="M7.2 5.3c0.42 0 0.76 0.34 0.76 0.76v11.88c0 0.42-0.34 0.76-0.76 0.76c-0.42 0-0.76-0.34-0.76-0.76V6.06c0-0.42 0.34-0.76 0.76-0.76z" />
+                  <path class="icon-filled" d="M17.22 5.8c0.63-0.4 1.46 0.06 1.46 0.81v10.78c0 0.75-0.83 1.21-1.46 0.81l-8.34-5.39c-0.58-0.37-0.58-1.25 0-1.62z" />
+                </svg>
+              </button>
+              <button id="btn-play" class="transport-button primary" type="button" aria-label="再生" disabled>
+                <span id="play-icon" class="play-icon" aria-hidden="true">
+                  <svg class="transport-icon" viewBox="0 0 24 24" focusable="false">
+                    <path class="play-shape icon-filled" d="M9 6.45c0-0.76 0.84-1.22 1.47-0.8l8.08 5.55c0.56 0.38 0.56 1.22 0 1.6l-8.08 5.55c-0.63 0.42-1.47-0.04-1.47-0.8z" />
+                    <g class="pause-shape">
+                      <rect x="7.6" y="5.7" width="3.25" height="12.6" rx="1.15" />
+                      <rect x="13.15" y="5.7" width="3.25" height="12.6" rx="1.15" />
+                    </g>
+                  </svg>
+                </span>
+              </button>
+              <button id="btn-stop" class="transport-button stop" type="button" aria-label="停止" disabled>
+                <svg class="transport-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <rect class="icon-filled" x="7.4" y="7.4" width="9.2" height="9.2" rx="1.25" />
+                </svg>
+              </button>
+              <button id="btn-next-song" class="transport-button" type="button" aria-label="次の曲">
+                <svg class="transport-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path class="icon-filled" d="M16.8 5.3c0.42 0 0.76 0.34 0.76 0.76v11.88c0 0.42-0.34 0.76-0.76 0.76c-0.42 0-0.76-0.34-0.76-0.76V6.06c0-0.42 0.34-0.76 0.76-0.76z" />
+                  <path class="icon-filled" d="M6.78 5.8c-0.63-0.4-1.46 0.06-1.46 0.81v10.78c0 0.75 0.83 1.21 1.46 0.81l8.34-5.39c0.58-0.37 0.58-1.25 0-1.62z" />
+                </svg>
+              </button>
+              <button id="btn-repeat" class="transport-button mode" type="button" aria-label="リピート" aria-pressed="false">
+                <svg class="transport-icon repeat-icon" viewBox="0 0 24 24" aria-hidden="true" focusable="false">
+                  <path d="M17 2.75 20.25 6 17 9.25" />
+                  <path d="M3.75 11v-1c0-2.2 1.8-4 4-4h12.5" />
+                  <path d="M7 21.25 3.75 18 7 14.75" />
+                  <path d="M20.25 13v1c0 2.2-1.8 4-4 4H3.75" />
+                </svg>
+              </button>
+            </div>
+
+            <div class="progress" id="progress-track">
+              <div id="progress-bar"></div>
+              <input
+                id="progress-slider"
+                class="progress-slider"
+                type="range"
+                min="0"
+                max="1000"
+                step="1"
+                value="0"
+                aria-label="再生位置"
+                disabled
+              />
+            </div>
           </div>
 
           <div class="player-side">
             <div class="time-row">
-              <span id="status" class="sr-only">Initializing TextAlive...</span>
+              <span id="status" class="sr-only">TextAliveを初期化しています...</span>
               <span class="time-display"><b id="now-position">0:00</b><span>/</span><b id="now-duration">-</b></span>
             </div>
             <label class="volume-control" for="volume-slider">
-              <span class="volume-icon" aria-hidden="true">VOL</span>
+              <span class="volume-icon" aria-hidden="true">
+                <svg class="volume-icon-svg" viewBox="0 0 24 24" focusable="false">
+                  <path class="volume-speaker" d="M4.25 9.25h3.85L13.25 5v14L8.1 14.75H4.25z" />
+                  <path class="volume-wave" d="M16.1 8.4c0.95 0.96 1.45 2.12 1.45 3.6s-0.5 2.64-1.45 3.6" />
+                  <path class="volume-wave volume-wave-outer" d="M18.75 6.2c1.56 1.5 2.5 3.48 2.5 5.8s-0.94 4.3-2.5 5.8" />
+                </svg>
+              </span>
               <input id="volume-slider" type="range" min="0" max="100" step="1" value="100" />
-              <output id="volume-label" for="volume-slider">100%</output>
             </label>
             <div class="locale-picker">
               <button
                 id="btn-locale-menu"
                 class="locale-compact"
                 type="button"
-                aria-label="Language selection"
+                aria-label="表示言語"
                 aria-haspopup="true"
                 aria-expanded="false"
                 aria-controls="locale-menu"
               >
-                <span aria-hidden="true">文</span>
-                <b id="locale-current-label">JA</b>
+                <b id="locale-current-label">日本語</b>
                 <i aria-hidden="true"></i>
               </button>
               <div id="locale-menu" class="locale-menu" role="menu" hidden>
@@ -241,17 +278,17 @@
         </div>
 
         <p class="data-line">
-          <span>Beat <b id="beat-label">-</b></span>
-          <span>Chorus <b id="chorus-label">-</b></span>
-          <span>Vocal <b id="amp-label">-</b></span>
+          <span>拍 <b id="beat-label">-</b></span>
+          <span>サビ <b id="chorus-label">-</b></span>
+          <span>ボーカル <b id="amp-label">-</b></span>
         </p>
       </div>
     </section>
   </main>
 
-  <aside class="orientation-lock" aria-label="landscape orientation required">
+  <aside class="orientation-lock" aria-label="横向き表示が必要です">
     <div class="orientation-card" role="dialog" aria-labelledby="orientation-title" aria-describedby="orientation-copy">
-      <div class="locale-switcher locale-switcher-orientation" role="group" aria-label="Language selection">
+      <div class="locale-switcher locale-switcher-orientation" role="group" aria-label="表示言語">
         <button class="locale-option" type="button" data-locale-option="ja" aria-pressed="false">日本語</button>
         <button class="locale-option" type="button" data-locale-option="ko" aria-pressed="false">한국어</button>
         <button class="locale-option" type="button" data-locale-option="en" aria-pressed="false">EN</button>
@@ -269,7 +306,7 @@
         id="btn-orientation-fullscreen"
         class="orientation-fullscreen-toggle"
         type="button"
-        aria-label="Enter fullscreen"
+        aria-label="全画面にする"
         aria-pressed="false"
         hidden
       >

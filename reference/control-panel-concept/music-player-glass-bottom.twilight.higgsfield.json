@@ -1,0 +1,30 @@
+[
+  {
+    "id": "d202c11d-d8d1-40f6-8ae1-f5b8c9b00421",
+    "status": "completed",
+    "display_name": "GPT Image 2",
+    "job_set_type": "gpt_image_2",
+    "result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/hf_20260615_044526_d202c11d-d8d1-40f6-8ae1-f5b8c9b00421.png",
+    "created_at": 1781498726.732353,
+    "params": {
+      "width": 2688,
+      "height": 1520,
+      "prompt": "Create a high-fidelity 16:9 UI concept image for a web lyric app called \"湖のソナーレ\".\nUse the attached reference image only for the transparent liquid glass material, soft rim highlights, subtle caustic reflections, thin borders, and the calm lake-at-twilight mood.\n\nScene: a realistic wide lake view with distant mountains, torii gate near the waterline, subtle reflected sky and ripples, cinematic twilight-to-night atmosphere. The main visual must remain unobstructed.\n\nDesign a production-ready bottom music player control panel integrated into the scene:\n- A very thin, elegant glass rail floating just above the bottom edge, about 54px tall, spanning roughly 72% of screen width, centered.\n- Transparent liquid glass, not cloudy: background landscape should clearly show through, with only slight blur and saturation.\n- A hairline progress bar along the top edge of the rail, glowing like a fine reflection on water; include current progress and a small luminous knob.\n- Minimal icon controls in the center: previous track, play/pause, stop, next track. Use refined simple icons, no chunky buttons.\n- Left side: compact song title selector with a small down chevron, designed as a tiny translucent pill inside the rail. Do not show a large song list; only hint that it opens.\n- Right side: compact time readout and a volume icon with a short minimal slider.\n- The UI must feel like a premium music player, not a dashboard, not a debug panel, not a marketing landing page.\n- Keep all controls small but legible, aligned to a strict horizontal grid.\n- Match the Sonare lake visual language: poetic, Japanese, serene, transparent, water-light reflections.\n- No large opaque boxes, no thick panel, no card stack, no extra top panels, no phone mockup, no explanatory text blocks.\n\nOutput should look like a polished app screenshot / UI art direction frame, ready to guide HTML/CSS implementation.",
+      "medias": [
+        {
+          "data": {
+            "id": "c508e913-3268-4238-9d48-746c071f3e26",
+            "url": "https://d2ol7oe51mr4n9.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/c508e913-3268-4238-9d48-746c071f3e26_resize.jpg",
+            "type": "media_input"
+          },
+          "role": "image"
+        }
+      ],
+      "aspect_ratio": "16:9",
+      "quality": "high",
+      "resolution": "2k",
+      "model": "videotape-alpha",
+      "reference_elements": []
+    }
+  }
+]

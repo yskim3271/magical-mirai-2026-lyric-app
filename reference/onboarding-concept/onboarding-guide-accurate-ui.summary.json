@@ -1,0 +1,9 @@
+{
+  "reference_image": "reference/onboarding-concept/sample-06-current-ui-guide-panel-cropped.png",
+  "job": "7d66787d-503e-4a37-b0ea-ec261f22ab70",
+  "created_at": "2026-06-17",
+  "result_url": "https://d8j0ntlcm91z4.cloudfront.net/user_3F4Ds0mxZtPRWCzS4is7UvoO8BT/hf_20260616_174721_7d66787d-503e-4a37-b0ea-ec261f22ab70.png",
+  "prompt_summary": "first-run onboarding overlay preserving actual current app UI",
+  "model": "GPT Image 2",
+  "output_image": "reference/onboarding-concept/onboarding-guide-accurate-ui.png"
+}

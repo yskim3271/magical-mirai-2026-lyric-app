@@ -657,11 +657,19 @@ const fragmentShader = `
     vec3 toriiMid = mix(vec3(0.26, 0.32, 0.34), horizonHaze, 0.45);
     toriiColor = mix(toriiMid, toriiColor, 0.88 - night * 0.05);
     toriiColor = mix(toriiColor, horizonHaze, 0.060 + sunset * 0.015 + twilight * 0.025 + night * 0.060);
+    float dayToriiBoost = 1.0 - smoothstep(0.10, 0.42, uSongProgress);
+    toriiColor *= 1.0 + dayToriiBoost * 0.055;
+    toriiColor += vec3(0.012, 0.014, 0.012) * dayToriiBoost;
     color = mix(color, toriiColor, torii.a);
     float horizonLine = exp(-abs(uv.y - horizon) * 95.0);
     float shoreBreakup = mix(0.72, 1.0, fbm(vec2(uv.x * 18.0, 3.0)));
     color = mix(color, photo, uBackdropReady * horizonLine * 0.02);
     color *= 1.0 - horizonLine * shoreBreakup * uBackdropReady * 0.10;
+
+    float dayLightBoost = 1.0 - smoothstep(0.10, 0.42, uSongProgress);
+    float skyLightLift = smoothstep(horizon - 0.02, horizon + 0.04, uv.y);
+    color *= 1.0 + dayLightBoost * 0.065;
+    color += vec3(0.014, 0.019, 0.019) * dayLightBoost * mix(0.72, 1.0, skyLightLift);
 
     float vignette = smoothstep(0.92, 0.24, distance(uv, vec2(0.5, 0.48)));
     color *= mix(0.72, 1.06, vignette);
