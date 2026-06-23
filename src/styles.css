@@ -16,6 +16,7 @@
   --mobile-glass-accent: rgba(130, 237, 235, 0.84);
   --mobile-glass-glow: rgba(92, 224, 229, 0.24);
   --font-ui: "Segoe UI", "Meiryo", "Yu Gothic", "Hiragino Sans", "Malgun Gothic", "Microsoft YaHei UI", sans-serif;
+  --font-numeric: "Roboto", "Helvetica Neue", "Arial", "Segoe UI", sans-serif;
   --font-serif: "Sonare Noto Serif JP", "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", "Noto Serif JP", "Noto Serif CJK JP", "Noto Serif CJK KR", "Noto Serif CJK SC", serif;
   --font-symbol: "Segoe UI Symbol", "Noto Music", "Yu Mincho", "YuMincho", "Hiragino Mincho ProN", serif;
   color-scheme: dark;
@@ -2379,7 +2380,9 @@ button {
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  font-family: var(--font-numeric);
   font-variant-numeric: tabular-nums;
+  font-feature-settings: "tnum" 1;
   white-space: nowrap;
 }
 

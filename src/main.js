@@ -661,8 +661,7 @@ player.addListener({
     clearPendingSeek();
     resetSoundmarks();
 
-    $("#song-title").textContent = song.name || activeSong?.title || "-";
-    $("#song-artist").textContent = song.artist?.name || activeSong?.artist || "-";
+    setTrackDisplay(song.name || activeSong?.title || "-", song.artist?.name || activeSong?.artist || "-");
     $("#now-duration").textContent = formatPlayerTime(video.duration);
     setStatusText("controls.statusLoaded", {
       phrases: phrases.length,
@@ -777,11 +776,12 @@ function renderSongList() {
     button.type = "button";
     button.className = "song-card";
     button.dataset.songId = song.id;
+    button.lang = "ja";
     button.setAttribute("role", "option");
     button.setAttribute("aria-selected", "false");
     button.innerHTML = `
-      <strong>${song.title}</strong>
-      <em>${song.artist}</em>
+      <strong lang="ja">${song.title}</strong>
+      <em lang="ja">${song.artist}</em>
     `;
     button.addEventListener("click", () => {
       transitionToSong(song.id, {
@@ -902,6 +902,22 @@ function setAttribute(selector, name, value) {
   if (element) element.setAttribute(name, value);
 }
 
+function setTrackDisplay(title, artist, { language = "ja", originalSong = true } = {}) {
+  const titleElement = $("#song-title");
+  const artistElement = $("#song-artist");
+  const selector = $("#btn-song-menu");
+
+  if (titleElement) {
+    titleElement.textContent = title;
+    titleElement.lang = language;
+  }
+  if (artistElement) {
+    artistElement.textContent = artist;
+    artistElement.lang = language;
+  }
+  selector?.classList.toggle("has-original-song", originalSong);
+}
+
 function updateDataLineLabel(selector, label) {
   const element = $(selector);
   if (!element) return;
@@ -970,8 +986,10 @@ function applyLocaleText() {
   setDockToggleCopy($("#control-dock")?.classList.contains("collapsed") ?? false);
   setAttribute("#progress-slider", "aria-label", t("controls.playbackPosition"));
   if (!activeSong) {
-    setText("#song-title", t("controls.placeholderTitle"));
-    setText("#song-artist", t("controls.placeholderArtist"));
+    setTrackDisplay(t("controls.placeholderTitle"), t("controls.placeholderArtist"), {
+      language: toHtmlLanguageTag(getUiLocale()),
+      originalSong: false,
+    });
   }
   setAttribute("#song-list", "aria-label", t("controls.targetSongs"));
   setAttribute(".transport", "aria-label", t("controls.playerControls"));
@@ -2050,8 +2068,7 @@ function markActiveSong() {
 }
 
 function resetDisplay({ resetSceneProgress = true } = {}) {
-  $("#song-title").textContent = activeSong.title;
-  $("#song-artist").textContent = activeSong.artist;
+  setTrackDisplay(activeSong.title, activeSong.artist);
   resetPlaybackProgressDisplay();
   $("#now-duration").textContent = "-";
   $("#beat-label").textContent = "-";
@@ -2508,8 +2525,7 @@ function initializeSoundmarkDebugMode() {
 
   $("#app")?.classList.add("debug-soundmarks");
   activeSong = activeSong ?? SONGS[0];
-  $("#song-title").textContent = activeSong.title;
-  $("#song-artist").textContent = activeSong.artist;
+  setTrackDisplay(activeSong.title, activeSong.artist);
   readyToPlay = false;
   setTransportEnabled(false);
   setDockCollapsed(false);
