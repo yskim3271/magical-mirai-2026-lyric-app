@@ -450,6 +450,9 @@ const SCENE_TRANSITION_OUT_MS = 1100;
 const SCENE_PROGRESS_TWEEN_MS = 1000;
 const SONG_READY_STALE_UPDATE_WINDOW_MS = 1200;
 const SONG_READY_STALE_POSITION_MS = 1500;
+const PLAYBACK_START_STALE_UPDATE_WINDOW_MS = 1800;
+const PLAYBACK_START_STALE_POSITION_MS = 1500;
+const PLAYBACK_START_GUARD_POSITION_MS = 360;
 const DEBUG_MODE = new URLSearchParams(window.location.search).get("debug");
 const DEBUG_TORII_EXCLUSION_ZONE = DEBUG_MODE === "torii-zone";
 const DEBUG_TORII_REFLECTION = DEBUG_MODE === "torii-reflection";
@@ -605,6 +608,7 @@ let pendingSeekPosition = null;
 let pendingSeekStartedAt = 0;
 let songLoadPending = false;
 let songReadySettlingUntil = 0;
+let playbackStartSettlingUntil = 0;
 let onboardingActive = false;
 let onboardingStep = 0;
 let onboardingPreviewApplied = false;
@@ -684,7 +688,7 @@ player.addListener({
     syncMediaElementVolume(getVolumeValue());
     if (autoplayAfterSongLoad) {
       autoplayAfterSongLoad = false;
-      setTimeout(() => player.requestPlay(), 0);
+      setTimeout(requestPlaybackStart, 0);
     }
   },
 
@@ -710,6 +714,7 @@ player.addListener({
 
   onPause() {
     playbackActive = false;
+    clearPlaybackStartSettling();
     lake.setAmbientRipplesEnabled(true);
     updatePlayPauseButton();
   },
@@ -726,6 +731,7 @@ player.addListener({
     isProgressScrubbing = false;
     playbackEndHandled = false;
     clearPendingSeek();
+    clearPlaybackStartSettling();
     clearSongLoadState();
     hideNoteProgressToast();
     resetSoundmarks();
@@ -1280,6 +1286,7 @@ function closeOnboarding() {
   onboardingActive = false;
   overlay.classList.remove("is-open");
   app.classList.remove("onboarding-active");
+  delete app.dataset.onboardingStep;
   clearOnboardingLeaderLine();
   resetOnboardingPreview();
   setDockCollapsed(onboardingPreviousDockCollapsed);
@@ -1336,6 +1343,7 @@ function updateOnboardingStep() {
   if (!overlay) return;
 
   overlay.dataset.step = String(onboardingStep);
+  $("#app")?.setAttribute("data-onboarding-step", String(onboardingStep));
   updateOnboardingActiveCallout(overlay);
   if (label) label.textContent = `${onboardingStep + 1} / ${ONBOARDING_STEP_COUNT}`;
   if (prevButton) prevButton.disabled = onboardingStep <= 0;
@@ -1613,8 +1621,13 @@ function togglePlayback() {
   if (isPlaybackActive()) {
     player.requestPause();
   } else {
-    player.requestPlay();
+    requestPlaybackStart();
   }
+}
+
+function requestPlaybackStart() {
+  beginPlaybackStartSettling();
+  player.requestPlay();
 }
 
 function toggleShuffle() {
@@ -1654,6 +1667,7 @@ function stopPlayback() {
   playbackEndHandled = false;
   isProgressScrubbing = false;
   clearPendingSeek();
+  clearPlaybackStartSettling();
   clearSongLoadState();
   clearSoundmarkSpawnQueue();
   hideNoteProgressToast();
@@ -1768,7 +1782,7 @@ function restartCurrentSong({ resume = false } = {}) {
   player.requestMediaSeek(0);
   updatePlayback(0, { force: true });
   if (resume) {
-    setTimeout(() => player.requestPlay(), 0);
+    setTimeout(requestPlaybackStart, 0);
   }
 }
 
@@ -2036,6 +2050,7 @@ function selectSong(songId, { resetSceneProgress = true } = {}) {
   playbackEndHandled = false;
   isProgressScrubbing = false;
   noteProgressShownSongId = null;
+  clearPlaybackStartSettling();
   lyricChunkCursor = 0;
   previousPosition = 0;
   lastBeatToken = null;
@@ -2156,6 +2171,7 @@ function updatePlayback(position, { force = false } = {}) {
   if (sceneTransitionActive) return;
   if (!force && shouldSkipPlaybackUpdateForSongLoad(position)) return;
   if (!force && shouldSkipPlaybackUpdateForPendingSeek(position)) return;
+  if (!force && shouldSkipPlaybackUpdateForPlaybackStart(position)) return;
 
   const duration = player.video?.duration ?? 0;
   const progress = duration > 0 ? clamp(position / duration, 0, 1) : 0;
@@ -2258,6 +2274,41 @@ function shouldSkipPlaybackUpdateForSongLoad(position) {
   if (looksStale) return true;
 
   songReadySettlingUntil = 0;
+  return false;
+}
+
+function beginPlaybackStartSettling() {
+  if (!shouldGuardPlaybackStart()) {
+    clearPlaybackStartSettling();
+    return;
+  }
+
+  playbackStartSettlingUntil = performance.now() + PLAYBACK_START_STALE_UPDATE_WINDOW_MS;
+}
+
+function clearPlaybackStartSettling() {
+  playbackStartSettlingUntil = 0;
+}
+
+function shouldGuardPlaybackStart() {
+  return readyToPlay
+    && pendingSeekPosition == null
+    && previousPosition <= PLAYBACK_START_GUARD_POSITION_MS;
+}
+
+function shouldSkipPlaybackUpdateForPlaybackStart(position) {
+  if (playbackStartSettlingUntil <= 0) return false;
+
+  if (performance.now() > playbackStartSettlingUntil) {
+    clearPlaybackStartSettling();
+    return false;
+  }
+
+  const looksStale = previousPosition <= PLAYBACK_START_GUARD_POSITION_MS
+    && Number(position) > PLAYBACK_START_STALE_POSITION_MS;
+  if (looksStale) return true;
+
+  clearPlaybackStartSettling();
   return false;
 }
 
@@ -2877,20 +2928,24 @@ function spawnSoundmarkMarker(soundmark) {
   marker.setAttribute("aria-label", t("soundmark.open", { title: localized.title }));
   marker.title = localized.title;
 
+  const floatLayer = document.createElement("span");
+  floatLayer.className = "soundmark-float";
+  floatLayer.setAttribute("aria-hidden", "true");
+
   const symbol = document.createElement("span");
   symbol.className = "soundmark-symbol";
   symbol.textContent = getSoundmarkDisplaySymbol(soundmark);
-  marker.appendChild(symbol);
+  floatLayer.appendChild(symbol);
 
   const unreadIndicator = document.createElement("span");
   unreadIndicator.className = "soundmark-unread";
-  unreadIndicator.setAttribute("aria-hidden", "true");
-  marker.appendChild(unreadIndicator);
+  floatLayer.appendChild(unreadIndicator);
+  marker.appendChild(floatLayer);
 
   marker.addEventListener("click", (event) => {
     event.stopPropagation();
     lake.addRipple(position.x, position.y, 0.62);
-    openSoundmarkPanel(soundmark);
+    toggleSoundmarkPanel(soundmark);
   });
 
   layer.appendChild(marker);
@@ -3202,6 +3257,25 @@ function openSoundmarkPanel(soundmark, options = {}) {
   panel.dataset.phase = getLyricGuidePhaseLabel(soundmarkLastProgress);
   scheduleAnimationFrame(() => panel.classList.add("is-open"));
   scheduleAnimationFrame(updateSoundmarkPlacementOverlay);
+}
+
+function toggleSoundmarkPanel(soundmark) {
+  if (isSoundmarkPanelOpenFor(soundmark.id)) {
+    closeSoundmarkPanel();
+    return;
+  }
+
+  openSoundmarkPanel(soundmark);
+}
+
+function isSoundmarkPanelOpenFor(soundmarkId) {
+  const panel = $("#soundmark-panel");
+  return Boolean(
+    panel
+      && !panel.hidden
+      && panel.classList.contains("is-open")
+      && activeSoundmarkId === soundmarkId,
+  );
 }
 
 function renderSoundmarkPanelContent(soundmark) {

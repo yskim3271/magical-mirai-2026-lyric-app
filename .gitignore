@@ -11,3 +11,4 @@ tools/torii-segmentation/models/
 reference/onboarding-concept/chrome-*/
 reference/**/chrome-*/
 reference/**/chrome-profile/
+reference/layout-sweep/
