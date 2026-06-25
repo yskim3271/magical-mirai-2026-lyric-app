@@ -65,6 +65,16 @@ const QUICK_STATES = [
   "orientation",
 ];
 
+const ONBOARDING_CALLOUT_ORDER = ["guide", "song", "notes", "panel", "collection", "controls"];
+const ONBOARDING_TARGET_SELECTORS = {
+  guide: "#lyric-guide",
+  song: "#btn-song-menu",
+  notes: ".soundmark-pin.is-visible",
+  panel: "#soundmark-panel",
+  collection: "#note-progress-toast",
+  controls: ".playback-core",
+};
+
 const BOX_SPECS = [
   { id: "app", selector: "#app", label: "app", color: "#6ee7ff", category: "stage" },
   { id: "lyric-guide", selector: "#lyric-guide", label: "lyric guide", color: "#fef08a", category: "primary" },
@@ -455,6 +465,7 @@ async function runViewportCases(browser, baseUrl, viewport, states, outputRoot, 
       screenshot: null,
       boxes: [],
       textOverflows: [],
+      onboardingLeader: null,
       issues: [{
         type: "viewport-error",
         severity: "error",
@@ -479,6 +490,8 @@ async function captureCaseOnPage(page, viewport, state, outputRoot, options = {}
     const audit = await page.evaluate(collectLayoutAudit, {
       boxSpecs: BOX_SPECS,
       textCheckSelectors: TEXT_CHECK_SELECTORS,
+      onboardingTargets: ONBOARDING_TARGET_SELECTORS,
+      onboardingCalloutOrder: ONBOARDING_CALLOUT_ORDER,
       stateId: state.id,
       viewport,
     });
@@ -510,6 +523,7 @@ async function captureCaseOnPage(page, viewport, state, outputRoot, options = {}
       screenshot,
       boxes: audit.boxes,
       textOverflows: audit.textOverflows,
+      onboardingLeader: audit.onboardingLeader,
       issues,
       stage: audit.stage,
       orientation: viewport.width >= viewport.height ? "landscape" : "portrait",
@@ -521,6 +535,7 @@ async function captureCaseOnPage(page, viewport, state, outputRoot, options = {}
       screenshot: null,
       boxes: [],
       textOverflows: [],
+      onboardingLeader: null,
       issues: [{
         type: "case-error",
         severity: "error",
@@ -662,6 +677,7 @@ async function setupCaseState(page, state) {
       onboarding.classList.add("is-open");
       onboarding.dataset.step = String(step);
       app?.classList.add("onboarding-active");
+      app?.setAttribute("data-onboarding-step", String(step));
       setDockCollapsed(false);
       ensureGuide();
       closeSongMenu();
@@ -684,6 +700,8 @@ async function setupCaseState(page, state) {
 
       if (step === 3) openSoundmarkPanel();
       if (step === 4) openNoteProgress();
+      window.dispatchEvent(new Event("resize"));
+      window.dispatchEvent(new Event("sonare:onboarding-layout"));
     }
 
     if (stateToApply.id === "orientation") {
@@ -720,7 +738,7 @@ async function setupCaseState(page, state) {
   }, state);
 }
 
-function collectLayoutAudit({ boxSpecs, textCheckSelectors, stateId, viewport }) {
+function collectLayoutAudit({ boxSpecs, textCheckSelectors, onboardingTargets, onboardingCalloutOrder, stateId, viewport }) {
   const isVisible = (element) => {
     if (!element) return false;
     for (let current = element; current && current.nodeType === 1; current = current.parentElement) {
@@ -798,10 +816,53 @@ function collectLayoutAudit({ boxSpecs, textCheckSelectors, stateId, viewport })
     stage: boxes.find((box) => box.id === "app")?.rect ?? null,
     boxes,
     textOverflows,
+    onboardingLeader: collectOnboardingLeaderAudit(),
   };
 
   function round(value) {
     return Math.round(Number(value) * 100) / 100;
+  }
+
+  function collectOnboardingLeaderAudit() {
+    const overlay = document.querySelector("#onboarding");
+    if (!overlay || overlay.hidden || !stateId.startsWith("onboarding-")) return null;
+
+    const step = Number(overlay.dataset.step);
+    const calloutName = onboardingCalloutOrder[step];
+    const targetSelector = onboardingTargets[calloutName];
+    const activeCallout = overlay.querySelector(".onboarding-callout.is-active");
+    const dot = activeCallout?.querySelector(".onboarding-dot");
+    const markedTarget = document.querySelector("[data-onboarding-target='true']");
+    const target = markedTarget ?? (targetSelector ? document.querySelector(targetSelector) : null);
+    const path = document.querySelector("#onboarding-leader-line");
+    const overlayRect = toRect(overlay);
+    const pathEnd = parseLineEnd(path?.getAttribute("d") ?? "");
+
+    return {
+      step,
+      calloutName,
+      targetSelector,
+      pathTargetSelector: path?.dataset.targetSelector ?? "",
+      hasPath: Boolean(path?.getAttribute("d")),
+      pathEnd: pathEnd
+        ? {
+            x: round(pathEnd.x + overlayRect.left),
+            y: round(pathEnd.y + overlayRect.top),
+          }
+        : null,
+      calloutRect: activeCallout ? toRect(activeCallout) : null,
+      dotRect: dot ? toRect(dot) : null,
+      targetRect: target ? toRect(target) : null,
+    };
+  }
+
+  function parseLineEnd(d) {
+    const match = d.match(/L\s+(-?\d+(?:\.\d+)?)\s+(-?\d+(?:\.\d+)?)\s*$/);
+    if (!match) return null;
+    return {
+      x: round(match[1]),
+      y: round(match[2]),
+    };
   }
 }
 
@@ -867,6 +928,57 @@ function evaluateIssues(audit, state, viewport) {
     });
   }
 
+  if (Number.isInteger(state.onboardingStep)) {
+    const leader = audit.onboardingLeader;
+    if (!leader) {
+      issues.push({
+        type: "onboarding-leader",
+        severity: "error",
+        message: "onboarding leader audit data is missing",
+      });
+    } else if (!leader.targetRect || !leader.dotRect || !leader.hasPath || !leader.pathEnd) {
+      issues.push({
+        type: "onboarding-leader",
+        severity: "error",
+        message: `${leader.calloutName} leader is incomplete for target ${leader.targetSelector}`,
+        leader,
+      });
+    } else {
+      if (leader.pathTargetSelector !== leader.targetSelector) {
+        issues.push({
+          type: "onboarding-leader",
+          severity: "error",
+          message: `${leader.calloutName} leader targets ${leader.pathTargetSelector || "(none)"} instead of ${leader.targetSelector}`,
+          leader,
+        });
+      }
+
+      const dotCenter = {
+        x: leader.dotRect.centerX,
+        y: leader.dotRect.centerY,
+      };
+      const dotOutside = pointOutsideDistance(dotCenter, leader.targetRect, 8);
+      if (dotOutside > 0) {
+        issues.push({
+          type: "onboarding-leader",
+          severity: "error",
+          message: `${leader.calloutName} leader dot misses ${leader.targetSelector} by ${dotOutside.toFixed(1)}px`,
+          leader,
+        });
+      }
+
+      const pathOutside = pointOutsideDistance(leader.pathEnd, leader.targetRect, 18);
+      if (pathOutside > 0) {
+        issues.push({
+          type: "onboarding-leader",
+          severity: "error",
+          message: `${leader.calloutName} leader line ends away from ${leader.targetSelector} by ${pathOutside.toFixed(1)}px`,
+          leader,
+        });
+      }
+    }
+  }
+
   if (state.portraitOnly && viewport.width >= viewport.height) {
     issues.push({
       type: "invalid-case",
@@ -902,6 +1014,16 @@ function outsideDistance(rect, bounds) {
     rect.right - bounds.right,
     bounds.top - rect.top,
     rect.bottom - bounds.bottom,
+    0,
+  );
+}
+
+function pointOutsideDistance(point, rect, tolerance = 0) {
+  return Math.max(
+    rect.left - tolerance - point.x,
+    point.x - (rect.right + tolerance),
+    rect.top - tolerance - point.y,
+    point.y - (rect.bottom + tolerance),
     0,
   );
 }

@@ -440,6 +440,15 @@ const SOUNDMARK_SLOT_SYMBOLS = ["♪", "♫", "♩", "♬", "♭", "♯", "♮",
 const NOTE_PROGRESS_SHOW_AT = 0.985;
 const NOTE_PROGRESS_VISIBLE_MS = 6000;
 const ONBOARDING_STEP_COUNT = 6;
+const ONBOARDING_CALLOUT_ORDER = ["guide", "song", "notes", "panel", "collection", "controls"];
+const ONBOARDING_TARGETS = {
+  guide: "#lyric-guide",
+  song: "#btn-song-menu",
+  notes: ".soundmark-pin.is-visible",
+  panel: "#soundmark-panel",
+  collection: "#note-progress-toast",
+  controls: ".playback-core",
+};
 const ONBOARDING_PREVIEW_PROGRESS = 0.58;
 const ONBOARDING_PREVIEW_SOUNDMARK_COUNT = 5;
 const ONBOARDING_PREVIEW_NOTE_COUNT = 3;
@@ -1254,6 +1263,7 @@ function initializeOnboarding() {
   $("#btn-onboarding-next")?.addEventListener("click", handleOnboardingNext);
   document.addEventListener("keydown", handleOnboardingKeydown);
   window.addEventListener("resize", scheduleOnboardingLeaderLineUpdate);
+  window.addEventListener("sonare:onboarding-layout", updateOnboardingLeaderLine);
   showOnboarding();
 }
 
@@ -1357,12 +1367,15 @@ function updateOnboardingStep() {
 }
 
 function updateOnboardingActiveCallout(overlay) {
-  const calloutOrder = ["guide", "song", "notes", "panel", "collection", "controls"];
-  const activeCallout = calloutOrder[onboardingStep] ?? calloutOrder[0];
+  const activeCallout = getOnboardingCalloutName(onboardingStep);
 
   overlay.querySelectorAll(".onboarding-callout").forEach((callout) => {
     callout.classList.toggle("is-active", callout.dataset.callout === activeCallout);
   });
+}
+
+function getOnboardingCalloutName(step) {
+  return ONBOARDING_CALLOUT_ORDER[step] ?? ONBOARDING_CALLOUT_ORDER[0];
 }
 
 function scheduleOnboardingLeaderLineUpdate() {
@@ -1386,8 +1399,9 @@ function updateOnboardingLeaderLine() {
   const path = $("#onboarding-leader-line");
   const activeCallout = overlay?.querySelector(".onboarding-callout.is-active");
   const dot = activeCallout?.querySelector(".onboarding-dot");
+  const target = getOnboardingTargetElement(activeCallout?.dataset.callout, activeCallout);
 
-  if (!overlay || !svg || !path || !activeCallout || !dot || overlay.hidden || !onboardingActive) {
+  if (!overlay || !svg || !path || !activeCallout || !dot || !target || overlay.hidden || !onboardingActive) {
     clearOnboardingLeaderLine();
     return;
   }
@@ -1395,19 +1409,21 @@ function updateOnboardingLeaderLine() {
   const overlayWidth = overlay.clientWidth;
   const overlayHeight = overlay.clientHeight;
   const calloutRect = getLayoutRectRelativeTo(activeCallout, overlay);
-  const dotRect = getLayoutRectRelativeTo(dot, overlay);
-  if (overlayWidth <= 0 || overlayHeight <= 0 || calloutRect.width <= 0 || dotRect.width <= 0) {
+  const targetRect = getLayoutRectRelativeTo(target, overlay);
+  if (overlayWidth <= 0 || overlayHeight <= 0 || calloutRect.width <= 0 || targetRect.width <= 0 || targetRect.height <= 0) {
     clearOnboardingLeaderLine();
     return;
   }
 
-  const dotCenter = {
-    x: dotRect.left + dotRect.width / 2,
-    y: dotRect.top + dotRect.height / 2,
-  };
-  const anchor = getRectEdgePointToward(calloutRect, dotCenter);
-  const dx = dotCenter.x - anchor.x;
-  const dy = dotCenter.y - anchor.y;
+  const targetPoint = getRectCenter(targetRect);
+  dot.style.left = `${(targetPoint.x - calloutRect.left).toFixed(1)}px`;
+  dot.style.top = `${(targetPoint.y - calloutRect.top).toFixed(1)}px`;
+  dot.style.right = "auto";
+  dot.style.bottom = "auto";
+
+  const anchor = getRectEdgePointToward(calloutRect, targetPoint);
+  const dx = targetPoint.x - anchor.x;
+  const dy = targetPoint.y - anchor.y;
   const distance = Math.hypot(dx, dy);
   if (distance < 8) {
     clearOnboardingLeaderLine();
@@ -1416,17 +1432,20 @@ function updateOnboardingLeaderLine() {
 
   const unitX = dx / distance;
   const unitY = dy / distance;
+  const dotRect = getLayoutRectRelativeTo(dot, overlay);
   const dotRadius = Math.max(dotRect.width, dotRect.height) / 2;
   const start = {
     x: anchor.x + unitX * 2,
     y: anchor.y + unitY * 2,
   };
   const end = {
-    x: dotCenter.x - unitX * (dotRadius + 2),
-    y: dotCenter.y - unitY * (dotRadius + 2),
+    x: targetPoint.x - unitX * (dotRadius + 2),
+    y: targetPoint.y - unitY * (dotRadius + 2),
   };
 
   svg.setAttribute("viewBox", `0 0 ${overlayWidth.toFixed(1)} ${overlayHeight.toFixed(1)}`);
+  path.dataset.targetCallout = activeCallout.dataset.callout ?? "";
+  path.dataset.targetSelector = ONBOARDING_TARGETS[activeCallout.dataset.callout] ?? "";
   path.setAttribute(
     "d",
     `M ${start.x.toFixed(1)} ${start.y.toFixed(1)} L ${end.x.toFixed(1)} ${end.y.toFixed(1)}`,
@@ -1434,39 +1453,79 @@ function updateOnboardingLeaderLine() {
 }
 
 function getLayoutRectRelativeTo(element, root) {
-  let left = 0;
-  let top = 0;
-  let current = element;
-
-  while (current && current !== root && typeof current.offsetLeft === "number") {
-    left += current.offsetLeft;
-    top += current.offsetTop;
-    current = current.offsetParent;
-  }
-
-  if (current !== root) {
-    const rootRect = root.getBoundingClientRect();
-    const rect = element.getBoundingClientRect();
-    return {
-      left: rect.left - rootRect.left,
-      top: rect.top - rootRect.top,
-      width: rect.width,
-      height: rect.height,
-      right: rect.right - rootRect.left,
-      bottom: rect.bottom - rootRect.top,
-    };
-  }
-
-  const width = element.offsetWidth;
-  const height = element.offsetHeight;
+  const rootRect = root.getBoundingClientRect();
+  const rect = element.getBoundingClientRect();
   return {
-    left,
-    top,
-    width,
-    height,
-    right: left + width,
-    bottom: top + height,
+    left: rect.left - rootRect.left,
+    top: rect.top - rootRect.top,
+    width: rect.width,
+    height: rect.height,
+    right: rect.right - rootRect.left,
+    bottom: rect.bottom - rootRect.top,
   };
+}
+
+function getOnboardingTargetElement(calloutName, activeCallout) {
+  document.querySelectorAll("[data-onboarding-target]").forEach((target) => {
+    delete target.dataset.onboardingTarget;
+  });
+
+  if (calloutName === "notes") {
+    const soundmarkTarget = getOnboardingSoundmarkTarget(activeCallout);
+    if (soundmarkTarget) soundmarkTarget.dataset.onboardingTarget = "true";
+    return soundmarkTarget;
+  }
+
+  const selector = ONBOARDING_TARGETS[calloutName];
+  if (!selector) return null;
+  const target = document.querySelector(selector);
+  if (target) target.dataset.onboardingTarget = "true";
+  return target;
+}
+
+function getRectCenter(rect) {
+  return {
+    x: rect.left + rect.width / 2,
+    y: rect.top + rect.height / 2,
+  };
+}
+
+function getOnboardingSoundmarkTarget(activeCallout) {
+  const markers = Array.from(document.querySelectorAll(".soundmark-pin.is-visible"));
+  if (markers.length <= 1) return markers[0] ?? null;
+
+  const calloutRect = activeCallout?.getBoundingClientRect();
+  if (!calloutRect) return markers[0];
+  const calloutCenter = {
+    x: calloutRect.left + calloutRect.width / 2,
+    y: calloutRect.top + calloutRect.height / 2,
+  };
+
+  return markers
+    .map((marker) => {
+      const rect = marker.getBoundingClientRect();
+      const center = {
+        x: rect.left + rect.width / 2,
+        y: rect.top + rect.height / 2,
+      };
+      return {
+        marker,
+        overlap: rectIntersectionArea(calloutRect, rect),
+        distance: Math.hypot(center.x - calloutCenter.x, center.y - calloutCenter.y),
+      };
+    })
+    .sort((left, right) => {
+      const leftOverlaps = left.overlap > 0;
+      const rightOverlaps = right.overlap > 0;
+      if (leftOverlaps !== rightOverlaps) return leftOverlaps ? 1 : -1;
+      return left.distance - right.distance;
+    })[0]?.marker ?? markers[0];
+}
+
+function rectIntersectionArea(left, right) {
+  const width = Math.max(0, Math.min(left.right, right.right) - Math.max(left.left, right.left));
+  const height = Math.max(0, Math.min(left.bottom, right.bottom) - Math.max(left.top, right.top));
+  return width * height;
 }
 
 function getRectEdgePointToward(rect, target) {
@@ -1493,7 +1552,12 @@ function clearOnboardingLeaderLine() {
     window.cancelAnimationFrame(onboardingLeaderFrame);
     onboardingLeaderFrame = null;
   }
-  $("#onboarding-leader-line")?.removeAttribute("d");
+  const path = $("#onboarding-leader-line");
+  path?.removeAttribute("d");
+  if (path) {
+    delete path.dataset.targetCallout;
+    delete path.dataset.targetSelector;
+  }
 }
 
 function applyOnboardingPreview() {
